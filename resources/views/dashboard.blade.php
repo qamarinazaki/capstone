@@ -100,7 +100,7 @@
     <div class="row g-3 mb-4">
         <div class="col-lg-6">
             <div class="card p-3 shadow-sm border-0">
-                <h5 class="fw-bold mb-3">Parcels per Day (Trend)</h5>
+                <h5 class="fw-bold mb-3">Monthly Parcel Trend</h5>
                 <canvas id="trendChart" height="200"></canvas>
             </div>
         </div>
