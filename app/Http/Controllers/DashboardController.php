@@ -41,7 +41,7 @@ class DashboardController extends Controller
             ->select('L1_Name as state', DB::raw('COUNT(*) as total'))
             ->groupBy('L1_Name')
             ->orderByDesc('total')
-            ->limit(3)
+            //->limit(3)
             ->get();
         $stateLabels = $stateStats->pluck('state');
         $stateData = $stateStats->pluck('total');
