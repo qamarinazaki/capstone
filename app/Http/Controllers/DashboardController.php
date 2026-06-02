@@ -31,21 +31,36 @@ class DashboardController extends Controller
             });
         }
 
-        // 4. Metrics
+        // 4. Core Metrics Calculations
         $totalParcel = (clone $query)->count();
         $totalWeight = (clone $query)->sum('Original_Weight') ?: 0;
         $avgWeight   = (clone $query)->avg('Original_Weight') ?: 0;
         $delivered   = (clone $query)->where('Order_Granular_Status', 'LIKE', '%DELIVERED%')->count();
 
-        // 5. TOP 3 STATES
+        // 5. STATES DISTRIBUTION (Normalizing State Names for Qamarina's Map)
         $stateStats = (clone $query)
             ->select('L1_Name as state', DB::raw('COUNT(*) as total'))
             ->groupBy('L1_Name')
             ->orderByDesc('total')
-            //->limit(3)
             ->get();
-        $stateLabels = $stateStats->pluck('state');
-        $stateData = $stateStats->pluck('total');
+            
+        // Map data to harmonize inconsistent database values with standard GeoJSON keys
+        $normalizedLabels = [];
+        $normalizedData = [];
+        foreach ($stateStats as $row) {
+            $name = strtoupper(trim($row->state));
+            
+            // Map common inconsistencies explicitly
+            if ($name === 'PULAU PINANG') $name = 'PENANG';
+            if ($name === 'KUALA LUMPUR') $name = 'W.P. KUALA LUMPUR';
+            if ($name === 'LABUAN') $name = 'W.P. LABUAN';
+            if ($name === 'PUTRAJAYA') $name = 'W.P. PUTRAJAYA';
+            
+            $normalizedLabels[] = $name;
+            $normalizedData[] = $row->total;
+        }
+        $stateLabels = $normalizedLabels;
+        $stateData = $normalizedData;
 
         // 6. Parcel Size Distribution
         $sizeStats = (clone $query)
@@ -55,22 +70,23 @@ class DashboardController extends Controller
         $sizeLabels = $sizeStats->pluck('size');
         $sizeData = $sizeStats->pluck('total');
 
-        // 7. Trend Logic (Untuk format YYYY-MM-DD)
-$trend = (clone $query)
-    ->select(
-        DB::raw("DATE_FORMAT(Delivery_Date, '%M') as month_name"),
-        DB::raw("DATE_FORMAT(Delivery_Date, '%m') as month_num"),
-        DB::raw('COUNT(*) as total')
-    )
-    ->groupBy(
-        DB::raw("DATE_FORMAT(Delivery_Date, '%m')"),
-        DB::raw("DATE_FORMAT(Delivery_Date, '%M')")
-    )
-    ->orderBy('month_num', 'asc') 
-    ->get();
-    
-$trendLabels = $trend->pluck('month_name'); 
-$trendData = $trend->pluck('total');
+        // 7. FIXED TREND LOGIC (Always tracks the entire year context for full lines)
+        $trendQuery = DB::table($table)->where('Delivery_Date', 'LIKE', '%' . $selectedYear . '%');
+        
+        $trend = $trendQuery->select(
+                DB::raw("DATE_FORMAT(Delivery_Date, '%M') as month_name"),
+                DB::raw("DATE_FORMAT(Delivery_Date, '%m') as month_num"),
+                DB::raw('COUNT(*) as total')
+            )
+            ->groupBy(
+                DB::raw("DATE_FORMAT(Delivery_Date, '%m')"),
+                DB::raw("DATE_FORMAT(Delivery_Date, '%M')")
+            )
+            ->orderBy('month_num', 'asc') 
+            ->get();
+            
+        $trendLabels = $trend->pluck('month_name'); 
+        $trendData = $trend->pluck('total');
 
         // 8. Gender Distribution
         $genderData = (clone $query)
@@ -92,17 +108,17 @@ $trendData = $trend->pluck('total');
     {
         $table = 'feedback_data';
 
-        // 1. Get all raw feedback for the 35 comments rows
+        // 1. Get all raw feedback rows
         $feedback = DB::table($table)->orderByDesc('id')->get();
 
-        // 2. Fetch the 52 survey responses calculations from your CustomerRating model 
+        // 2. Fetch survey responses calculations
         $avgPunctuality = CustomerRating::avg('rating_punctuality') ?? 0;
         $avgCondition   = CustomerRating::avg('rating_condition') ?? 0;
         $avgAttitude    = CustomerRating::avg('rating_attitude') ?? 0;
         $avgTrust       = CustomerRating::avg('rating_trust') ?? 0;
         $totalResponses = CustomerRating::count();
 
-        // 3. Trust Distribution for Chart (From your feedback_data table)
+        // 3. Trust Distribution for Chart
         $trustStats = DB::table($table)
             ->select('trust_rating', DB::raw('count(*) as total'))
             ->groupBy('trust_rating')
