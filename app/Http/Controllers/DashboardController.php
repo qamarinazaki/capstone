@@ -42,7 +42,7 @@ class DashboardController extends Controller
             ->select('L1_Name as state', DB::raw('COUNT(*) as total'))
             ->groupBy('L1_Name')
             ->orderByDesc('total')
-            ->limit(3)
+            //->limit(3)
             ->get();
         $stateLabels = $stateStats->pluck('state');
         $stateData = $stateStats->pluck('total');
@@ -55,15 +55,22 @@ class DashboardController extends Controller
         $sizeLabels = $sizeStats->pluck('size');
         $sizeData = $sizeStats->pluck('total');
 
-        // 7. Trend Logic
-        $trend = (clone $query)
-            ->select('Delivery_Date as label', DB::raw('COUNT(*) as total'))
-            ->groupBy('Delivery_Date')
-            ->orderBy('Delivery_Date')
-            ->get();
-            
-        $trendLabels = $trend->pluck('label');
-        $trendData = $trend->pluck('total');
+        // 7. Trend Logic (Untuk format YYYY-MM-DD)
+$trend = (clone $query)
+    ->select(
+        DB::raw("DATE_FORMAT(Delivery_Date, '%M') as month_name"),
+        DB::raw("DATE_FORMAT(Delivery_Date, '%m') as month_num"),
+        DB::raw('COUNT(*) as total')
+    )
+    ->groupBy(
+        DB::raw("DATE_FORMAT(Delivery_Date, '%m')"),
+        DB::raw("DATE_FORMAT(Delivery_Date, '%M')")
+    )
+    ->orderBy('month_num', 'asc') 
+    ->get();
+    
+$trendLabels = $trend->pluck('month_name'); 
+$trendData = $trend->pluck('total');
 
         // 8. Gender Distribution
         $genderData = (clone $query)
