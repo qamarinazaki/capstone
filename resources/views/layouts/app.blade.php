@@ -84,8 +84,8 @@
         <a class="nav-link {{ request()->is('chatbot') ? 'active' : '' }}" href="{{ route('chatbot') }}">
             <i class="bi bi-chat-dots me-2"></i> CHATBOT
         </a>
-        <a class="nav-link text-muted" href="#">
-            <i class="bi bi-lightning-charge me-2"></i> FLASH
+        <a class="nav-link {{ request()->is('flash') ? 'active' : '' }}" href="{{ route('dashboard.flash') }}">
+            <i class="bi bi-lightning-charge-fill me-2"></i> FLASH
         </a>
     </nav>
 </div>

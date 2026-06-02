@@ -14,3 +14,6 @@ Route::get('/feedback', [DashboardController::class, 'feedback'])->name('feedbac
 // ChatBot Routes
 Route::get('/chatbot', [ChatBotController::class, 'index'])->name('chatbot');
 Route::post('/chatbot/message', [ChatBotController::class, 'message'])->name('chatbot.message');
+
+// Flash Routes
+Route::get('/flash', [App\Http\Controllers\DashboardController::class, 'flash'])->name('dashboard.flash');
