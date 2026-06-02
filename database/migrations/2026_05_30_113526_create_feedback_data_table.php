@@ -10,18 +10,16 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-    {
-        Schema::create('feedback_data', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
-        });
-    }
+{
+    Schema::create('feedback_data', function (Blueprint $table) {
+        $table->id();
+        $table->integer('trust_rating')->nullable(); 
+        $table->timestamps();
+    });
+}
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::dropIfExists('feedback_data');
-    }
+public function down(): void
+{
+    Schema::dropIfExists('feedback_data');
+}
 };
