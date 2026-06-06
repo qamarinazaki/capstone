@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class ChatBotController extends Controller
 {
@@ -31,7 +33,7 @@ class ChatBotController extends Controller
         }
 
         $month = null;
-        $altMonth = null; // Fix: Tracks single-digit months (e.g., '5' vs '05')
+        $altMonth = null; 
         $monthName = null;
         
         $monthMap = [
@@ -75,7 +77,7 @@ class ChatBotController extends Controller
         // 3. TOKEN DICTIONARIES FOR BALANCED ROUTING
         $cleanTokenString = str_replace(['?', '!', '.', ',', '/', '-'], ' ', $message);
         $tokens = explode(' ', $cleanTokenString);
-        $tokens = array_filter(array_map('trim', $tokens)); // Clean out empty spaces
+        $tokens = array_filter(array_map('trim', $tokens)); 
         
         $parcelKeywords   = ['parcel', 'parcels', 'order', 'orders', 'count', 'volume', 'total', 'many', 'much', 'shipment', 'shipments', 'quantity', 'amount', 'totals'];
         $weightKeywords   = ['weight', 'weights', 'heavy', 'kg', 'kilogram', 'kilograms', 'mass', 'avg', 'average', 'load'];
@@ -87,15 +89,13 @@ class ChatBotController extends Controller
         $deliveryScore = count(array_intersect($tokens, $deliveryKeywords));
         $feedbackScore = count(array_intersect($tokens, $feedbackKeywords));
 
-        // 4. EXECUTION LAYER ROUTING
+        // 4. LOCAL DATABASE EXECUTION LAYER ROUTING
 
         // --- PARCEL VOLUME MATCH ---
         if ($parcelScore > 0 && $parcelScore >= max($weightScore, $deliveryScore, $feedbackScore)) {
             $query = DB::table('ninjavan_data');
-            
             if ($year) {
                 if ($month) {
-                    // Match either leading zero format or single digit text format seamlessly
                     $query->where(function($q) use ($month, $altMonth, $year) {
                         $q->where('Delivery_Date', 'LIKE', '%/' . $month . '/' . $year)
                           ->orWhere('Delivery_Date', 'LIKE', '%/' . $altMonth . '/' . $year);
@@ -104,23 +104,20 @@ class ChatBotController extends Controller
                     $query->where('Delivery_Date', 'LIKE', '%/' . $year);
                 }
             }
-            
             if ($detectedState) {
                 $query->where('Recipient_State', 'LIKE', '%' . $detectedState . '%');
             }
-
             $count = $query->count();
-            if ($count === 0) return response()->json(['reply' => "No operational data found matching your specifications."]);
-
-            $contextStr = ($monthName ? $monthName . ' ' : '') . ($year ? $year : 'Historical Timeline');
-            $stateStr = $detectedState ? " within **" . ucfirst($detectedState) . "**" : "";
-            return response()->json(['reply' => "Our shipping metrics indicate **" . number_format($count) . " parcels** were logged for **" . $contextStr . "**" . $stateStr . "."]);
+            if ($count > 0) {
+                $contextStr = ($monthName ? $monthName . ' ' : '') . ($year ? $year : 'Historical Timeline');
+                $stateStr = $detectedState ? " within **" . ucfirst($detectedState) . "**" : "";
+                return response()->json(['reply' => "Our shipping metrics indicate **" . number_format($count) . " parcels** were logged for **" . $contextStr . "**" . $stateStr . "."]);
+            }
         }
 
         // --- WEIGHT MATCH ---
         if ($weightScore > 0 && $weightScore >= max($parcelScore, $deliveryScore, $feedbackScore)) {
             $query = DB::table('ninjavan_data');
-            
             if ($year) {
                 if ($month) {
                     $query->where(function($q) use ($month, $altMonth, $year) {
@@ -131,18 +128,16 @@ class ChatBotController extends Controller
                     $query->where('Delivery_Date', 'LIKE', '%/' . $year);
                 }
             }
-            
             $avg = $query->avg('Original_Weight') ?? 0;
-            if ($avg == 0) return response()->json(['reply' => "No operational data found matching your specifications."]);
-
-            $contextStr = ($monthName ? $monthName . ' ' : '') . ($year ? $year : 'Historical Timeline');
-            return response()->json(['reply' => "During **" . $contextStr . "**, the calculated average freight cargo mass was **" . number_format($avg, 2) . " kg** per transit package."]);
+            if ($avg > 0) {
+                $contextStr = ($monthName ? $monthName . ' ' : '') . ($year ? $year : 'Historical Timeline');
+                return response()->json(['reply' => "During **" . $contextStr . "**, the calculated average freight cargo mass was **" . number_format($avg, 2) . " kg** per transit package."]);
+            }
         }
 
         // --- DELIVERY STATUS MATCH ---
         if ($deliveryScore > 0 && $deliveryScore >= max($parcelScore, $weightScore, $feedbackScore)) {
             $query = DB::table('ninjavan_data')->where('Order_Granular_Status', 'LIKE', '%DELIVERED%');
-            
             if ($year) {
                 if ($month) {
                     $query->where(function($q) use ($month, $altMonth, $year) {
@@ -153,64 +148,108 @@ class ChatBotController extends Controller
                     $query->where('Delivery_Date', 'LIKE', '%/' . $year);
                 }
             }
-            
             $count = $query->count();
-            if ($count === 0) return response()->json(['reply' => "No operational data found matching your specifications."]);
-
-            $contextStr = ($monthName ? $monthName . ' ' : '') . ($year ? $year : 'Historical Timeline');
-            return response()->json(['reply' => "Fulfillment metrics confirm **" . number_format($count) . " successful deliveries** recorded across **" . $contextStr . "**. "]);
+            if ($count > 0) {
+                $contextStr = ($monthName ? $monthName . ' ' : '') . ($year ? $year : 'Historical Timeline');
+                return response()->json(['reply' => "Fulfillment metrics confirm **" . number_format($count) . " successful deliveries** recorded across **" . $contextStr . "**. "]);
+            }
         }
 
-        // --- CUSTOMER RATING & SATISFACTION SUMMARY MATCH ---
+        // --- CUSTOMER RATING MATCH ---
         if ($feedbackScore > 0) {
             $count = DB::table('customer_ratings')->count();
-            if ($count === 0) return response()->json(['reply' => "No evaluation metrics found inside the customer review system data pools."]);
-            
-            $avgPunctuality = DB::table('customer_ratings')->avg('rating_punctuality') ?? 0;
-            $avgCondition   = DB::table('customer_ratings')->avg('rating_condition') ?? 0;
-            $avgAttitude    = DB::table('customer_ratings')->avg('rating_attitude') ?? 0;
+            if ($count > 0) {
+                $avgPunctuality = DB::table('customer_ratings')->avg('rating_punctuality') ?? 0;
+                $avgCondition   = DB::table('customer_ratings')->avg('rating_condition') ?? 0;
+                $avgAttitude    = DB::table('customer_ratings')->avg('rating_attitude') ?? 0;
 
-            return response()->json([
-                'reply' => "### Customer Evaluation & Satisfaction Summary Report\n" .
-                           "Calculated across **" . number_format($count) . " active survey respondents**:\n\n" .
-                           "* **Courier Service Speed / Punctuality Rating:** " . number_format($avgPunctuality, 1) . " / 5.0 ★\n" .
-                           "* **Package Condition / Quality Assurance:** " . number_format($avgCondition, 1) . " / 5.0 ★\n" .
-                           "* **Rider Conduct / Professionalism Attitude:** " . number_format($avgAttitude, 1) . " / 5.0 ★"
-            ]);
+                return response()->json([
+                    'reply' => "### Customer Evaluation & Satisfaction Summary Report\n" .
+                               "Calculated across **" . number_format($count) . " active survey respondents**:\n\n" .
+                               "* **Courier Service Speed / Punctuality Rating:** " . number_format($avgPunctuality, 1) . " / 5.0 ★\n" .
+                               "* **Package Condition / Quality Assurance:** " . number_format($avgCondition, 1) . " / 5.0 ★\n" .
+                               "* **Rider Conduct / Professionalism Attitude:** " . number_format($avgAttitude, 1) . " / 5.0 ★"
+                ]);
+            }
         }
 
-        // --- CONTEXTUAL TIMELINE SUMMARY FOR TARGET PERIODS ---
-        if ($year) {
-            $queryBase = DB::table('ninjavan_data');
-            if ($month) {
-                $queryBase->where(function($q) use ($month, $altMonth, $year) {
-                    $q->where('Delivery_Date', 'LIKE', '%/' . $month . '/' . $year)
-                      ->orWhere('Delivery_Date', 'LIKE', '%/' . $altMonth . '/' . $year);
-                });
-            } else {
-                $queryBase->where('Delivery_Date', 'LIKE', '%/' . $year);
+        // =========================================================================
+        // 5. LIVE GENERATIVE AI CORE LAYER (STABLE PRODUCTION ROUTING)
+        // =========================================================================
+        
+        $apiKey = env('GEMINI_API_KEY', 'AQ.Ab8RN6LJbb24_nd2LUMVtRuGp_03mN7GfQ5GTF7Bd9EdBUXTnQ');
+
+        $systemPrompt = "You are the integrated core AI intelligence engine for NinjaVault, an advanced secure smart logistics ecosystem. "
+                      . "Your purpose is to answer user questions with high clarity and technical precision. "
+                      . "Answer general questions like 'What is the objective of this dashboard?' by explaining that NinjaVault provides comprehensive tracking, "
+                      . "parcel metrics analytics, shipping volumes, and customer satisfaction monitoring in one secure management dashboard. "
+                      . "Keep your answers highly professional, clean, and concise.";
+
+        try {
+            // STEP A: Request clean, stable baseline 'gemini-1.5-flash' without version suffixes
+            $response = Http::withoutVerifying()->withHeaders([
+                'Content-Type' => 'application/json'
+            ])->post("https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=" . trim($apiKey), [
+                'contents' => [
+                    [
+                        'parts' => [
+                            ['text' => $systemPrompt . "\n\nUser Question: " . $rawMessage]
+                        ]
+                    ]
+                ]
+            ]);
+
+            if ($response->successful()) {
+                $aiOutputData = $response->json();
+                $generatedText = $aiOutputData['candidates'][0]['content']['parts'][0]['text'] ?? null;
+
+                if (!empty($generatedText)) {
+                    return response()->json(['reply' => trim($generatedText)]);
+                }
             }
 
-            $yearlyCount = (clone $queryBase)->count();
-            if ($yearlyCount === 0) {
-                return response()->json(['reply' => "No operational data found for your target query timeframe."]);
-            }
-            
-            $yearlyDelivered = (clone $queryBase)->where('Order_Granular_Status', 'LIKE', '%DELIVERED%')->count();
-            $yearlyWeight = (clone $queryBase)->avg('Original_Weight') ?? 0;
+            // STEP B: Fallback deployment handling if the enterprise account requires upgraded modern engines (2.5 generation)
+            if ($response->status() == 404) {
+                $backupResponse = Http::withoutVerifying()->withHeaders([
+                    'Content-Type' => 'application/json'
+                ])->post("https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=" . trim($apiKey), [
+                    'contents' => [
+                        [
+                            'parts' => [
+                                ['text' => $systemPrompt . "\n\nUser Question: " . $rawMessage]
+                            ]
+                        ]
+                    ]
+                ]);
 
-            $contextStr = ($monthName ? $monthName . ' ' : '') . $year;
+                if ($backupResponse->successful()) {
+                    $aiOutputData = $backupResponse->json();
+                    $generatedText = $aiOutputData['candidates'][0]['content']['parts'][0]['text'] ?? null;
+
+                    if (!empty($generatedText)) {
+                        return response()->json(['reply' => trim($generatedText)]);
+                    }
+                }
+
+                return response()->json([
+                    'reply' => "### Google API Handshake Interrupted\n" .
+                               "* **HTTP Status Code:** " . $backupResponse->status() . "\n" .
+                               "* **Raw Gateway Explanation:** " . $backupResponse->body()
+                ]);
+            }
+
+            // Diagnostic reporting block for unexpected infrastructure messaging
             return response()->json([
-                'reply' => "### NinjaVault Operational Performance Summary: $contextStr\n" .
-                           "* **Gross Cargo Traffic Volumetrics:** " . number_format($yearlyCount) . " items handled\n" .
-                           "* **Final Successful Deliveries:** " . number_format($yearlyDelivered) . " shipments processed\n" .
-                           "* **Calculated Mass Profile Average:** " . number_format($yearlyWeight, 2) . " kg"
+                'reply' => "### Google API Handshake Interrupted\n" .
+                           "* **HTTP Status Code:** " . $response->status() . "\n" .
+                           "* **Raw Gateway Explanation:** " . $response->body()
+            ]);
+
+        } catch (\Exception $ex) {
+            return response()->json([
+                'reply' => "### Runtime Network Exception Traced\n" .
+                           "* **Exception Message:** " . $ex->getMessage()
             ]);
         }
-
-        // --- SYSTEM EXPLICIT FALLBACK ---
-        return response()->json([
-            'reply' => "No operational data found matching your specific query configuration keywords. Try asking: *'Total parcels in May 2024'*, *'Average weight in 2022'*, or *'Show customer survey satisfaction score summary'*."
-        ]);
     }
 }

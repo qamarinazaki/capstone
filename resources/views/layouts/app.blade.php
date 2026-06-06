@@ -32,7 +32,28 @@
         .nav-link { color: #555; padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; font-weight: 500; text-decoration: none; display: block; transition: all 0.2s; }
         .nav-link:hover { background: #fff5f5; color: #dc3545; }
         .nav-link.active { background: #dc3545; color: #fff !important; box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3); }
-        .sidebar-brand { font-size: 1.6rem; font-weight: 800; color: #dc3545; text-decoration: none; display: block; margin-bottom: 40px; }
+        
+        /* --- LOGO BRAND BRANDING UPDATES --- */
+        .sidebar-brand { 
+            font-size: 1.5rem; 
+            font-weight: 800; 
+            color: #1e293b; 
+            text-decoration: none; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 40px; 
+            padding: 5px 0;
+            background: #ffffff; /* Explicit background for blending context */
+        }
+        .sidebar-brand img {
+            transition: transform 0.2s ease-in-out;
+            display: inline-block;
+        }
+        .sidebar-brand:hover img {
+            transform: scale(1.08);
+        }
         
         /* --- MAP FIXES --- */
         #vmap-malaysia {
@@ -70,22 +91,23 @@
 </head>
 <body>
 
-<div class="sidebar shadow-sm">
-    <a href="/" class="sidebar-brand text-center">
-        <i class="bi bi-shield-lock-fill me-2"></i>NinjaVault
+<div class="sidebar shadow-sm" style="background: #ffffff;">
+    <a href="/" class="sidebar-brand">
+        <img src="{{ asset('images/ninja-vault-logo.png') }}" 
+             alt="NinjaVault Logo" 
+             style="height: 38px; width: auto; object-fit: contain; mix-blend-mode: multiply;">
+        <span>Ninja<span style="color: #dc3545;">Vault</span></span>
     </a>
+    
     <nav class="nav flex-column">
         <a class="nav-link {{ request()->is('/') || request()->is('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
             <i class="bi bi-grid-1x2-fill me-2"></i> MAIN PAGE
         </a>
         <a class="nav-link {{ request()->is('feedback') ? 'active' : '' }}" href="{{ route('feedback') }}">
-            <i class="bi bi-people-fill me-2"></i> CUSTOMER
+            <i class="bi bi-shield-check me-2"></i> SERVICE QUALITY
         </a>
         <a class="nav-link {{ request()->is('chatbot') ? 'active' : '' }}" href="{{ route('chatbot') }}">
             <i class="bi bi-chat-dots me-2"></i> CHATBOT
-        </a>
-        <a class="nav-link {{ request()->is('flash') ? 'active' : '' }}" href="{{ route('dashboard.flash') }}">
-            <i class="bi bi-lightning-charge-fill me-2"></i> FLASH
         </a>
     </nav>
 </div>
