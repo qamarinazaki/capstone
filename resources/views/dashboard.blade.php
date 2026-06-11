@@ -3,21 +3,20 @@
 @section('content')
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&default" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
 <style>
-
     :root {
-        --dash-bg: #f3f4f6; /* Soft light gray base */
-        --card-bg: rgba(255, 255, 255, 0.85); /* Slightly translucent cards to reveal background ambient glow */
-        --primary-dark: #0f172a;
-        --secondary-slate: #1e293b;
-        --accent-red: #e11d48;
-        --text-main: #1e293b;
-        --text-muted: #64748b;
-        --border-color: rgba(226, 232, 240, 0.8);
+        --dash-bg: #1e1e24;
+        --card-bg: rgba(255, 255, 255, 0.92);
+        --primary-dark: #1e1e24;
+        --secondary-slate: #2d3142;
+        --accent-red: #c92c36;
+        --text-main: #2d3142;
+        --text-muted: #70798c;
+        --border-color: rgba(218, 223, 230, 0.7);
         --radius-lg: 16px;
         --radius-md: 12px;
         --font-sans: 'Plus Jakarta Sans', sans-serif;
@@ -26,42 +25,38 @@
     body {
         font-family: var(--font-sans);
         color: var(--text-main);
-        background-color: #f1f5f9;
-        
-        /* --- BRANDED CANVAS BACKGROUND ENGINE --- */
-        /* This builds a premium subtle geometric dot grid with dynamic ninja-red ambient light leaks beneath your cards */
+        background-color: var(--dash-bg);
         background-image: 
-            radial-gradient(at 0% 0%, rgba(225, 29, 72, 0.07) 0px, transparent 35%), 
-            radial-gradient(at 100% 100%, rgba(15, 23, 42, 0.05) 0px, transparent 40%),
-            radial-gradient(at 50% 50%, rgba(225, 29, 72, 0.04) 0px, transparent 50%),
-            radial-gradient(rgba(148, 163, 184, 0.12) 1.5px, transparent 1.5px);
-        background-size: 100% 100%, 100% 100%, 100% 100%, 24px 24px;
+            linear-gradient(rgba(30, 30, 36, 0.80), rgba(30, 30, 36, 0.86)), 
+            url("{{ asset('images/ninjavan-bg.png') }}");
+        background-size: cover;
+        background-position: center center;
+        background-repeat: no-repeat;
         background-attachment: fixed;
     }
 
     .fw-extrabold { font-weight: 800; }
     
-    /* Premium Blurry Transparent Cards (Glassmorphism look over the new background) */
     .beauty-card {
         background: var(--card-bg);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.6);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.7);
         border-radius: var(--radius-lg);
-        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.04), 0 4px 12px -2px rgba(15, 23, 42, 0.02);
+        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.1), 0 4px 12px -2px rgba(15, 23, 42, 0.05);
         transition: transform 0.22s ease, box-shadow 0.22s ease;
     }
     
     .beauty-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 16px 30px -10px rgba(15, 23, 42, 0.08);
+        box-shadow: 0 16px 32px -8px rgba(15, 23, 42, 0.18);
     }
 
     .glass-dark-card {
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        background: linear-gradient(135deg, #1e1e24 0%, #2d3142 100%);
         border-radius: var(--radius-lg);
         border: 1px solid rgba(255, 255, 255, 0.08);
-        box-shadow: 0 12px 30px -5px rgba(15, 23, 42, 0.35);
+        box-shadow: 0 12px 25px -5px rgba(30, 30, 36, 0.4);
         position: relative;
         overflow: hidden;
     }
@@ -73,11 +68,10 @@
         right: -20%;
         width: 350px;
         height: 350px;
-        background: radial-gradient(circle, rgba(225, 29, 72, 0.2) 0%, rgba(255, 255, 255, 0) 75%);
+        background: radial-gradient(circle, rgba(201, 44, 54, 0.2) 0%, rgba(255, 255, 255, 0) 75%);
         pointer-events: none;
     }
 
-    /* Interactive Filters Design */
     .premium-select {
         border-radius: var(--radius-md);
         border: 1px solid var(--border-color);
@@ -85,41 +79,37 @@
         font-size: 0.875rem;
         font-weight: 600;
         color: var(--secondary-slate);
-        background-color: rgba(255, 255, 255, 0.9);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        background-color: rgba(255, 255, 255, 0.95);
         cursor: pointer;
     }
     .premium-select:focus {
         border-color: var(--accent-red);
-        box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.15);
+        box-shadow: 0 0 0 3px rgba(201, 44, 54, 0.15);
     }
 
-    /* Core Stats Display UI */
     .stat-pill {
-        border-left: 5px solid #2563eb;
+        border-left: 5px solid var(--secondary-slate);
         padding-left: 1rem;
     }
     .stat-pill.red-variant {
         border-left-color: var(--accent-red);
     }
 
-    /* Enhanced Leaflet Styling */
     #malaysiaMap {
         height: 520px;
         width: 100%;
         border-radius: var(--radius-md);
-        background-color: #f1f5f9;
+        background-color: #f8fafc;
         border: 1px solid var(--border-color);
     }
     
     .info-legend {
-        background: rgba(255, 255, 255, 0.9);
-        backdrop-filter: blur(8px);
+        background: rgba(255, 255, 255, 0.95);
         padding: 12px 16px;
         font-family: var(--font-sans);
         font-size: 11px;
         font-weight: 600;
-        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
+        box-shadow: 0 8px 16px -3px rgba(0,0,0,0.05);
         border-radius: var(--radius-md);
         border: 1px solid var(--border-color);
         color: var(--primary-dark);
@@ -134,10 +124,9 @@
         border-radius: 4px;
     }
 
-    /* Clean Info Panel Fields */
     .metric-bubble {
-        background-color: rgba(248, 250, 252, 0.7);
-        border: 1px solid rgba(241, 245, 249, 0.9);
+        background-color: rgba(248, 250, 252, 0.8);
+        border: 1px solid rgba(230, 235, 242, 0.9);
         border-radius: var(--radius-md);
         padding: 12px 16px;
     }
@@ -157,13 +146,13 @@
 <div class="container-fluid py-4 px-4">
     <div class="row align-items-center mb-4 g-3">
         <div class="col-md-6">
-            <span class="badge bg-danger bg-opacity-10 text-danger px-3 py-1.5 rounded-pill fw-bold text-uppercase tracking-wider mb-2" style="font-size: 0.75rem;">LIVE PERFORMANCE INTERFACE</span>
-            <h1 class="fw-extrabold text-dark tracking-tight mb-1" style="font-size: 1.85rem;">Main Dashboard</h1>
-            <p class="text-muted small mb-0">Operational intelligence & localized routing metrics</p>
+            <span class="badge bg-danger bg-opacity-15 text-danger px-3 py-1.5 rounded-pill fw-bold text-uppercase tracking-wider mb-2" style="font-size: 0.75rem; letter-spacing: 0.05em;">LIVE OPERATIONS INTERFACE</span>
+            <h1 class="fw-extrabold text-white tracking-tight mb-1" style="font-size: 1.85rem;">Main Dashboard</h1>
+            <p class="text-white-50 small mb-0">Operational intelligence & localized routing metrics</p>
         </div>
         
         <div class="col-md-6 d-flex justify-content-md-end align-items-center">
-            <form action="{{ url()->current() }}" method="GET" class="d-flex gap-3 bg-white p-2 rounded-3 border shadow-sm">
+            <form action="{{ url()->current() }}" method="GET" class="d-flex gap-3 bg-white bg-opacity-95 p-2 rounded-3 border shadow-sm">
                 <div>
                     <select name="year" class="form-select premium-select" onchange="this.form.submit()">
                         <option value="2023" {{ $selectedYear == '2023' ? 'selected' : '' }}>2023 Operations</option>
@@ -176,7 +165,7 @@
                     <select name="month" class="form-select premium-select" onchange="this.form.submit()">
                         <option value="all" {{ $selectedMonth == 'all' ? 'selected' : '' }}>All Time-frames</option>
                         @for ($i = 1; $i <= 12; $i++)
-                            @if ($selectedYear == '2026' && $i > 4)
+                            @if (trim($selectedYear) === '2026' && $i > 4)
                                 @break
                             @endif
                             <option value="{{ $i }}" {{ $selectedMonth == $i ? 'selected' : '' }}>
@@ -189,38 +178,49 @@
         </div>
     </div>
 
-    {{-- Safe Calculated Backend Processor PHP Logic block --}}
     @php
-        $queryData = \Illuminate\Support\Facades\DB::table('ninjavan_data')
-            ->where('Delivery_Date', 'LIKE', '%'.$selectedYear.'%');
+        $queryData = \Illuminate\Support\Facades\DB::table('ninjavan_data');
 
-        if(($selectedMonth ?? 'all') !== 'all') {
-            $formattedMonth = str_pad($selectedMonth, 2, '0', STR_PAD_LEFT);
-            $queryData->where('Delivery_Date', 'LIKE', '%/'.$formattedMonth.'/%');
+        if (($selectedMonth ?? 'all') !== 'all') {
+            $paddedMonth = str_pad($selectedMonth, 2, '0', STR_PAD_LEFT);
+            $rawMonth = (int)$selectedMonth;
+
+            $queryData->where(function($q) use ($paddedMonth, $rawMonth, $selectedYear) {
+                $q->where('Delivery_Date', 'LIKE', '%/' . $paddedMonth . '/' . $selectedYear . '%')
+                  ->orWhere('Delivery_Date', 'LIKE', '%/' . $rawMonth . '/' . $selectedYear . '%')
+                  ->orWhere('Delivery_Date', 'LIKE', $selectedYear . '-' . $paddedMonth . '-%');
+            });
+        } else {
+            $queryData->where(function($q) use ($selectedYear) {
+                $q->where('Delivery_Date', 'LIKE', '%/' . $selectedYear . '%')
+                  ->orWhere('Delivery_Date', 'LIKE', $selectedYear . '-%');
+            });
         }
 
         $allMatchingRows = $queryData->get();
         $avgTrust = \Illuminate\Support\Facades\DB::table('customer_ratings')->avg('rating_trust') ?? 0;
+        $totalRowsCount = count($allMatchingRows);
+        $totalFreightWeight = $allMatchingRows->sum('Original_Weight');
     @endphp
 
     <div class="row mb-4">
         <div class="col-12">
-            <div class="glass-dark-card p-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div class="glass-dark-card p-4 d-flex flex-wrap justify-content-between align-items-center gap-3" style="background-color: #252836 !important; border-radius: 12px;">
                 <div class="d-flex align-items-center gap-3">
                     <div class="bg-white bg-opacity-10 rounded-3 p-2.5 text-warning fs-3 shadow-inner">
                         <i class="bi bi-shield-check"></i>
                     </div>
                     <div>
-                        <div class="text-white-50 small fw-bold text-uppercase tracking-wider" style="font-size: 0.72rem;">Operational Integrity Index</div>
-                        <div class="d-flex align-items-baseline gap-2 mt-0.5">
-                            <h2 class="fw-extrabold text-white mb-0" style="font-size: 1.75rem;">{{ number_format($avgTrust, 1) }}</h2>
-                            <span class="text-white-50 font-monospace-premium">/ 5.0 Global Rating</span>
+                        <div class="text-white opacity-75 small fw-bold text-uppercase tracking-wider" style="font-size: 0.75rem; letter-spacing: 0.04em;">Operational Integrity Index</div>
+                        <div class="d-flex align-items-baseline gap-2 mt-1">
+                            <h2 class="fw-extrabold text-white mb-0" style="font-size: 2rem; line-height: 1;">{{ number_format($avgTrust, 1) }}</h2>
+                            <span class="text-white opacity-50 fw-semibold" style="font-size: 1rem;">/ 5.0 Global Rating</span>
                         </div>
                     </div>
                 </div>
-                <div class="fs-4 text-warning tracking-widest bg-white bg-opacity-5 px-3 py-1.5 rounded-pill">
+                <div class="fs-4 text-warning tracking-widest bg-white bg-opacity-10 px-3 py-1.5 rounded-pill shadow-sm d-flex gap-1 align-items-center">
                     @for($i = 1; $i <= 5; $i++)
-                        {!! $i <= round($avgTrust) ? '★' : '<span class="text-white-50 text-opacity-20">☆</span>' !!}
+                        {!! $i <= round($avgTrust) ? '★' : '<span class="text-white opacity-25">☆</span>' !!}
                     @endfor
                 </div>
             </div>
@@ -233,20 +233,29 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <div class="text-muted small fw-bold text-uppercase tracking-wider">Cumulative Distribution Volume</div>
-                        <div class="h2 fw-extrabold text-dark mt-1 mb-0" style="font-size: 2rem;">{{ number_format($totalParcel ?? count($allMatchingRows)) }}</div>
+                        <div class="h2 fw-extrabold text-dark mt-1 mb-0" style="font-size: 2rem;">{{ number_format($totalRowsCount) }}</div>
                     </div>
-                    <div class="fs-2 text-primary text-opacity-20 bg-primary bg-opacity-10 p-3 rounded-circle"><i class="bi bi-box-seam"></i></div>
+                    <div class="d-flex align-items-center justify-content-center rounded-circle" style="width: 60px; height: 60px; min-width: 60px; max-width: 60px; min-height: 60px; max-height: 60px; background-color: #2d3142 !important;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="#f8fafc" viewBox="0 0 16 16" style="display: block;">
+                            <path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5 8 5.961 14.154 3.5zm.565 4.83 5.75-2.3a.5.5 0 0 1 .648.472v8.5a.5.5 0 0 1-.314.464l-6 2.332a.5.5 0 0 1-.37 0l-6-2.332A.5.5 0 0 1 1 12.5v-8.5a.5.5 0 0 1 .648-.472l5.75 2.3zm-7.251 1.76v3.96l4.5 1.748V7.705L1.5 5.962z"/>
+                        </svg>
+                    </div>
                 </div>
             </div>
         </div>
+
         <div class="col-md-6">
             <div class="card beauty-card p-4 stat-pill red-variant">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <div class="text-muted small fw-bold text-uppercase tracking-wider">Gross Freight Weight</div>
-                        <div class="h2 fw-extrabold text-dark mt-1 mb-0" style="font-size: 2rem;">{{ number_format($totalWeight ?? $allMatchingRows->sum('Original_Weight'), 2) }} <span class="fs-5 text-muted fw-normal">kg</span></div>
+                        <div class="h2 fw-extrabold text-dark mt-1 mb-0" style="font-size: 2rem;">{{ number_format($totalFreightWeight, 2) }} <span class="fs-5 text-muted fw-normal">kg</span></div>
                     </div>
-                    <div class="fs-2 text-danger text-opacity-20 bg-danger bg-opacity-10 p-3 rounded-circle"><i class="bi bi-truck"></i></div>
+                    <div class="bg-danger bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; min-width: 60px; max-width: 60px; min-height: 60px; max-height: 60px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="currentColor" class="text-danger text-opacity-20" viewBox="0 0 16 16" style="display: block;">
+                            <path d="M0 3.5A1.5 1.5 0 0 1 1.5 2h9A1.5 1.5 0 0 1 12 3.5V5h1.02a1.5 1.5 0 0 1 .17.563l1.481 1.85a1.5 1.5 0 0 1 .329.938V10.5a1.5 1.5 0 0 1-1.5 1.5H14a2 2 0 1 1-4 0H5a2 2 0 1 1-3.998-.085A1.5 1.5 0 0 1 0 10.5zm1.294 7.456A2 2 0 0 1 4.737 11H11v-1H1.294zM12 7a1 1 0 0 0-1 1v1h2.5l-1.642-2.053A1 1 0 0 0 12 7m1.75 3a1 1 0 1 0 0 2 1 1 0 0 0 0-2m-9 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2"/>
+                        </svg>
+                    </div>
                 </div>
             </div>
         </div>
@@ -276,22 +285,22 @@
 
                     <div id="state-details-placeholder" class="text-center py-5">
                         <div class="p-3 bg-light rounded-circle d-inline-block mb-3">
-                            <i class="bi bi-cursor-fill text-muted fs-3 animate-pulse"></i>
+                            <i class="bi bi-cursor-fill text-muted fs-3"></i>
                         </div>
                         <p class="text-dark fw-semibold small mb-1">No Region Selected</p>
                         <p class="text-muted small px-4">Click any colored polygon node on the map canvas to extract live timestamp data logs and real-time package counts.</p>
                     </div>
 
-                    <div id="state-details-metrics" class="d-none animate-fadeIn">
+                    <div id="state-details-metrics" class="d-none">
                         <div class="mb-3">
                             <label class="text-muted small fw-bold text-uppercase d-block mb-1" style="font-size: 0.72rem;">Initial Logging Timestamp (Create_Time)</label>
-                            <div class="metric-bubble font-monospace-premium border-start border-primary border-3 text-dark fw-semibold" id="metric-create-time">--</div>
+                            <div class="metric-bubble font-monospace-premium border-start border-secondary border-3 text-dark fw-semibold" id="metric-create-time">--</div>
                         </div>
 
                         <div class="row g-3 mb-3">
                             <div class="col-6">
                                 <div class="metric-bubble text-center">
-                                    <label class="text-muted d-block mb-1 text-uppercase fw-bold" style="font-size: 0.68rem; letter-spacing: 0.02em;">Transit Lead Time</label>
+                                    <label class="text-muted d-block mb-1 text-uppercase fw-bold" style="font-size: 0.68rem; letter-spacing: 0.02em;">Time taken to deliver order</label>
                                     <div class="text-dark"><span class="h3 fw-extrabold" id="metric-delivery-days">--</span> <span class="small text-muted fw-semibold">Days</span></div>
                                 </div>
                             </div>
@@ -351,49 +360,58 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         
-        const serverDataset = {!! json_encode($allMatchingRows) !!};
-        const fullStateLabels = {!! json_encode($stateLabels ?? []) !!};
-        const fullStateData = {!! json_encode($stateData ?? []) !!};
+        const serverDataset = {!! json_encode($allMatchingRows ?? []) !!};
         
-        // ==========================================
-        // MAP ENGINE SETUP WITH INLINE HIGH-PRECISION GEOMETRY
-        // ==========================================
-        try {
-            const stateCountMap = {};
-            if (Array.isArray(fullStateLabels) && fullStateLabels.length > 0) {
-                fullStateLabels.forEach((label, idx) => {
-                    if (label) {
-                        let cleanKey = label.toUpperCase().replace('W.P.', '').replace('WILAYAH PERSEKUTUAN', '').trim();
-                        if (cleanKey === 'PULAU PINANG') cleanKey = 'PENANG';
-                        stateCountMap[cleanKey] = fullStateData[idx] || 0;
+        // Helper function to robustly extract month from various date patterns (d/m/Y or Y-m-d)
+        function getMonthFromRow(row) {
+            const dStr = row.Delivery_Date || row.delivery_date;
+            if (!dStr) return -1;
+            
+            let monthIndex = -1;
+            if (String(dStr).includes('/')) {
+                const parts = String(dStr).split('/');
+                if (parts.length >= 2) monthIndex = parseInt(parts[1], 10) - 1;
+            } else if (String(dStr).includes('-')) {
+                const parts = String(dStr).split('-');
+                if (parts.length >= 2) {
+                    if(parts[0].length === 4) {
+                        monthIndex = parseInt(parts[1], 10) - 1; // Y-m-d
+                    } else {
+                        monthIndex = parseInt(parts[1], 10) - 1; // d-m-Y
                     }
-                });
-            } else {
-                serverDataset.forEach(row => {
-                    if (row.L1_Name) {
-                        let cleanKey = row.L1_Name.toUpperCase().replace('W.P.', '').replace('WILAYAH PERSEKUTUAN', '').trim();
-                        if (cleanKey === 'PULAU PINANG') cleanKey = 'PENANG';
-                        stateCountMap[cleanKey] = (stateCountMap[cleanKey] || 0) + 1;
-                    }
-                });
+                }
             }
+            return monthIndex;
+        }
 
+        // ==========================================
+        // MAP ENGINE SETUP
+        // ==========================================
+        const stateCountMap = {};
+        serverDataset.forEach(row => {
+            const stateField = row.L1_Name || row.l1_name || row.State || row.state;
+            if (stateField) {
+                let cleanKey = stateField.toUpperCase().replace('W.P.', '').replace('WILAYAH PERSEKUTUAN', '').trim();
+                if (cleanKey === 'PULAU PINANG') cleanKey = 'PENANG';
+                stateCountMap[cleanKey] = (stateCountMap[cleanKey] || 0) + 1;
+            }
+        });
+
+        try {
             const m_map = L.map('malaysiaMap').setView([4.2105, 101.9758], 6);
             
-            // Soft Light Premium Carto Tiles
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                 attribution: '© CARTO'
             }).addTo(m_map);
 
             function getColor(d) {
-                // High contrast smooth gradient steps
-                return d > 2000 ? '#4c0519' :
-                       d > 1000 ? '#881337' :
-                       d > 500  ? '#be123c' :
-                       d > 200  ? '#e11d48' :
-                       d > 50   ? '#fb7185' :
-                       d > 10   ? '#fca5a5' :
-                       d > 0    ? '#ffe4e6' : '#f1f5f9'; 
+                return d > 2000 ? '#4a0e12' :
+                       d > 1000 ? '#6e1a24' :
+                       d > 500  ? '#942431' :
+                       d > 200  ? '#c92c36' :
+                       d > 50   ? '#e06c75' :
+                       d > 10   ? '#f0afb4' :
+                       d > 0    ? '#fae1e3' : '#f8fafc'; 
             }
 
             const preciseMalaysiaGeoJSON = {
@@ -457,60 +475,135 @@
                         }
                     }
                     
-                    layer.bindPopup(`<div style="font-family:'Plus Jakarta Sans',sans-serif; padding:2px;"><strong style="font-size:13px; color:#0f172a;">${name}</strong><br/><span style="color:#64748b; font-size:11px;">Volume:</span> <strong style="color:#e11d48;">${totalOrders.toLocaleString()} orders</strong></div>`);
+                    layer.bindPopup(`<div style="font-family:'Plus Jakarta Sans',sans-serif; padding:2px;"><strong style="font-size:13px; color:#1e1e24;">${name}</strong><br/><span style="color:#70798c; font-size:11px;">Volume:</span> <strong style="color:#c92c36;">${totalOrders.toLocaleString()} orders</strong></div>`);
 
                     layer.on('click', function() {
                         document.getElementById('selected-state-title').innerText = name;
                         document.getElementById('selected-state-badge').innerText = 'INSPECTING STATE';
-                        document.getElementById('selected-state-badge').className = 'badge bg-danger bg-opacity-10 text-danger px-3 py-1.5 rounded-pill small fw-bold text-uppercase';
+                        document.getElementById('selected-state-badge').className = 'badge bg-danger bg-opacity-15 text-danger px-3 py-1.5 rounded-pill small fw-bold text-uppercase';
 
                         const matchedRows = serverDataset.filter(row => {
-                            if (!row.L1_Name) return false;
-                            let targetKey = row.L1_Name.toUpperCase().replace('W.P.', '').replace('WILAYAH PERSEKUTUAN', '').trim();
+                            const stateField = row.L1_Name || row.l1_name || row.State || row.state;
+                            if (!stateField) return false;
+                            let targetKey = stateField.toUpperCase().replace('W.P.', '').replace('WILAYAH PERSEKUTUAN', '').trim();
                             if (targetKey === 'PULAU PINANG') targetKey = 'PENANG';
                             return targetKey === checkName;
                         });
 
+                        let createTime = 'N/A';
+                        let deliveryDateStr = 'N/A';
+                        let leadDays = '--';
+
                         if (matchedRows.length > 0) {
                             const latestRecord = matchedRows[matchedRows.length - 1];
-                            const createTime = latestRecord.Create_Time || latestRecord.create_time || 'N/A';
-                            const deliveryDateStr = latestRecord.Delivery_Date || latestRecord.delivery_date || 'N/A';
+                            createTime = latestRecord.Create_Time || latestRecord.create_time || 'N/A';
+                            deliveryDateStr = latestRecord.Delivery_Date || latestRecord.delivery_date || 'N/A';
                             
-                            let leadDays = 'N/A';
                             if (createTime !== 'N/A' && deliveryDateStr !== 'N/A') {
                                 try {
-                                    const created = new Date(createTime);
-                                    let sanitizedDateStr = deliveryDateStr;
-                                    if (deliveryDateStr.includes('/')) {
-                                        const bits = deliveryDateStr.split('/');
-                                        if(bits.length === 3) {
-                                            sanitizedDateStr = `${bits[2]}-${bits[1]}-${bits[0]}`;
-                                        }
-                                    }
-                                    const delivered = new Date(sanitizedDateStr);
-                                    const diffTime = Math.abs(delivered - created);
-                                    leadDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                                    if(isNaN(leadDays)) leadDays = '--';
-                                } catch (err) { leadDays = '--'; }
+  // UNIVERSAL PARSER: Handles timestamps, slashes, hyphens, and missing padded zeros
+const parseDateRobustly = (dateString) => {
+    if (!dateString || dateString === 'N/A') return new Date(NaN);
+    
+    // Remove any time element and whitespace
+    let cleanStr = String(dateString).trim().split(' ')[0];
+    let segments = [];
+    
+    if (cleanStr.includes('/')) {
+        segments = cleanStr.split('/');
+    } else if (cleanStr.includes('-')) {
+        segments = cleanStr.split('-');
+    }
+
+    if (segments.length === 3) {
+        let year, month, day;
+
+        if (segments[0].length === 4) {
+            // Format: YYYY-MM-DD or YYYY-M-D
+            year = parseInt(segments[0], 10);
+            month = parseInt(segments[1], 10) - 1;
+            day = parseInt(segments[2], 10);
+            
+            // Auto-heal truncated trailing zero (e.g., '3' -> '30') if it results in an invalid day for that month
+            if (day < 10 && segments[2].length === 1) {
+                let testObj = new Date(year, month, day * 10);
+                if (testObj.getMonth() === month) {
+                    day = day * 10;
+                }
+            }
+        } else {
+            // Format: DD/MM/YYYY or MM/DD/YYYY
+            // Check if first segment is clearly the day
+            if (parseInt(segments[0], 10) > 12) {
+                day = parseInt(segments[0], 10);
+                month = parseInt(segments[1], 10) - 1;
+            } else {
+                // Default to MM/DD/YYYY assuming standard export rules
+                month = parseInt(segments[0], 10) - 1;
+                day = parseInt(segments[1], 10);
+            }
+            year = parseInt(segments[2], 10);
+        }
+
+        return new Date(year, month, day);
+    }
+    
+    return new Date(dateString);
+};
+
+let createdDateObj = parseDateRobustly(createTime);
+let deliveredDateObj = parseDateRobustly(deliveryDateStr);
+
+if (!isNaN(createdDateObj.getTime()) && !isNaN(deliveredDateObj.getTime())) {
+    
+    // HEALING ENGINE: Only switch to day/month swap if the dates are still inverted after initial padding checks
+    if (deliveredDateObj < createdDateObj) {
+        let cleanDelivStr = String(deliveryDateStr).trim().split(' ')[0];
+        let delivSegs = cleanDelivStr.includes('/') ? cleanDelivStr.split('/') : cleanDelivStr.split('-');
+        
+        if (delivSegs.length === 3) {
+            let healedDeliveryObj;
+            if (delivSegs[0].length === 4) {
+                // YYYY-DD-MM conversion attempt
+                healedDeliveryObj = new Date(parseInt(delivSegs[0], 10), parseInt(delivSegs[2], 10) - 1, parseInt(delivSegs[1], 10));
+            } else {
+                // MM/DD/YYYY to DD/MM/YYYY swap attempt
+                healedDeliveryObj = new Date(parseInt(delivSegs[2], 10), parseInt(delivSegs[0], 10) - 1, parseInt(delivSegs[1], 10));
+            }
+
+            if (healedDeliveryObj >= createdDateObj && !isNaN(healedDeliveryObj.getTime())) {
+                deliveredDateObj = healedDeliveryObj;
+            }
+        }
+    }
+
+    // Final Math Calculation
+    if (deliveredDateObj >= createdDateObj) {
+        const diffTime = Math.abs(deliveredDateObj - createdDateObj);
+        leadDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    } else {
+        // If it's still inverted, compute absolute difference instead of hardcoding '0'
+        const diffTime = Math.abs(deliveredDateObj - createdDateObj);
+        leadDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    }
+}
+
+if(isNaN(leadDays) || leadDays > 90 || leadDays < 0) leadDays = '0';
+                                    
+                                } catch (err) { 
+                                    console.error("Date processing error:", err);
+                                    leadDays = '--'; 
+                                }
                             }
-
-                            document.getElementById('state-details-placeholder').classList.add('d-none');
-                            document.getElementById('state-details-metrics').classList.remove('d-none');
-
-                            document.getElementById('metric-create-time').innerText = createTime;
-                            document.getElementById('metric-delivery-days').innerText = leadDays;
-                            document.getElementById('metric-total-parcels').innerText = matchedRows.length.toLocaleString();
-                            document.getElementById('metric-delivery-date').innerText = deliveryDateStr;
-                        } else {
-                            document.getElementById('state-details-metrics').classList.add('d-none');
-                            document.getElementById('state-details-placeholder').classList.remove('d-none');
-                            document.getElementById('state-details-placeholder').innerHTML = `
-                                <div class="alert bg-rose bg-opacity-10 border border-rose-subtle text-danger mx-2 py-3 small text-center rounded-3" role="alert">
-                                    <i class="bi bi-exclamation-circle d-block fs-4 mb-2"></i>
-                                    No tracked logistics metrics found for <strong>${name}</strong> inside this selected window index.
-                                </div>
-                            `;
                         }
+
+                        document.getElementById('state-details-placeholder').classList.add('d-none');
+                        document.getElementById('state-details-metrics').classList.remove('d-none');
+
+                        document.getElementById('metric-create-time').innerText = createTime;
+                        document.getElementById('metric-delivery-days').innerText = leadDays;
+                        document.getElementById('metric-total-parcels').innerText = matchedRows.length.toLocaleString();
+                        document.getElementById('metric-delivery-date').innerText = deliveryDateStr;
                     });
                 }
             }).addTo(m_map);
@@ -529,10 +622,12 @@
             };
             legend.addTo(m_map);
 
-        } catch(e) { console.error(e); }
+        } catch(e) { 
+            console.error("Map initialization context failed: ", e); 
+        }
 
         // ==========================================
-        // MODERNIZED REFRESHED CHART INTELLIGENCE
+        // CHART INTELLIGENCE
         // ==========================================
         let maleCount = 0, femaleCount = 0, companyCount = 0;
         serverDataset.forEach(row => {
@@ -552,7 +647,7 @@
                 labels: ['Male Clients', 'Female Clients', 'Corporate'],
                 datasets: [{
                     data: [maleCount, femaleCount, companyCount],
-                    backgroundColor: ['#2563eb', '#e11d48', '#f59e0b'],
+                    backgroundColor: ['#2d3142', '#c92c36', '#f59e0b'],
                     hoverOffset: 4,
                     borderWidth: 0
                 }]
@@ -566,18 +661,18 @@
             }
         });
 
-        let top3Labels = [];
-        let top3Data = [];
-        if (Array.isArray(fullStateLabels) && fullStateLabels.length > 0) {
-            top3Labels = fullStateLabels.slice(0, 3);
-            top3Data = fullStateData.slice(0, 3);
-        } else {
-            const tempStates = {};
-            serverDataset.forEach(r => { if(r.L1_Name) tempStates[r.L1_Name] = (tempStates[r.L1_Name] || 0) + 1; });
-            const sortedStates = Object.entries(tempStates).sort((a,b) => b[1] - a[1]).slice(0,3);
-            top3Labels = sortedStates.map(x => x[0]);
-            top3Data = sortedStates.map(x => x[1]);
-        }
+        const tempStates = {};
+        serverDataset.forEach(r => { 
+            const stateField = r.L1_Name || r.l1_name || r.State || r.state;
+            if(stateField) {
+                let formatted = stateField.toUpperCase().replace('W.P.', '').replace('WILAYAH PERSEKUTUAN', '').trim();
+                if (formatted === 'PULAU PINANG') formatted = 'PENANG';
+                tempStates[formatted] = (tempStates[formatted] || 0) + 1;
+            }
+        });
+        const sortedStates = Object.entries(tempStates).sort((a,b) => b[1] - a[1]).slice(0,3);
+        let top3Labels = sortedStates.map(x => x[0]);
+        let top3Data = sortedStates.map(x => x[1]);
 
         if (window.myStateChartInstance !== null) window.myStateChartInstance.destroy();
         window.myStateChartInstance = new Chart(document.getElementById('stateChart'), {
@@ -587,8 +682,8 @@
                 datasets: [{
                     label: 'Parcels Volume',
                     data: top3Data,
-                    backgroundColor: 'rgba(37, 99, 235, 0.85)',
-                    hoverBackgroundColor: '#2563eb',
+                    backgroundColor: 'rgba(45, 49, 62, 0.85)',
+                    hoverBackgroundColor: '#2d3142',
                     borderRadius: 8
                 }]
             },
@@ -606,13 +701,8 @@
         const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         const trendMap = Array(12).fill(0);
         serverDataset.forEach(row => {
-            if (row.Delivery_Date) {
-                const parts = row.Delivery_Date.split('/');
-                if (parts.length >= 2) {
-                    const monthIndex = parseInt(parts[1], 10) - 1;
-                    if (monthIndex >= 0 && monthIndex < 12) trendMap[monthIndex]++;
-                }
-            }
+            let mIdx = getMonthFromRow(row);
+            if (mIdx >= 0 && mIdx < 12) trendMap[mIdx]++;
         });
 
         let finalTrendLabels = monthNames;
@@ -632,8 +722,8 @@
                 datasets: [{
                     label: 'Parcels Flow',
                     data: finalTrendData,
-                    backgroundColor: 'rgba(225, 29, 72, 0.85)',
-                    hoverBackgroundColor: '#e11d48',
+                    backgroundColor: 'rgba(201, 44, 54, 0.85)',
+                    hoverBackgroundColor: '#c92c36',
                     borderRadius: 6,
                     barPercentage: 0.7
                 }]

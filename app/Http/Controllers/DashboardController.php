@@ -12,32 +12,56 @@ class DashboardController extends Controller
     {
         $table = 'ninjavan_data';
         
-        // 1. Get filter status from request dynamically
-        $selectedYear = $request->get('year', '2023');
-        $selectedMonth = $request->get('month', 'all');
+        // ======================================================================
+        // 1. Get Filter Status & Sanitize Year Input (Removes "Operations" Text)
+        // ======================================================================
+        $rawYear = $request->get('year', '2023');
 
-        // Create a base query for core metrics, states, and sizes
+        if (preg_match('/(202\d)/', $rawYear, $matches)) {
+            $selectedYear = $matches[1];
+        } else {
+            $selectedYear = '2023'; 
+        }
+
+        $selectedMonth = $request->get('month', 'all');
         $query = DB::table($table);
 
-        // 2. Apply Year Filter uniformly across metrics
-        $query->where('Delivery_Date', 'LIKE', '%' . $selectedYear . '%');
+        // ======================================================================
+        // 2. HYBRID YEAR FILTER (Matches both '2024-05-12' and '12/05/2024')
+        // ======================================================================
+        $query->where(function($q) use ($selectedYear) {
+            $q->where('Delivery_Date', 'LIKE', '%' . $selectedYear . '%')
+              ->orWhere('Create_Time', 'LIKE', '%' . $selectedYear . '%');
+        });
 
-        // 3. FIXED MONTH FILTER (Prevents overlapping double digits like matching 28th day for August)
+        // ======================================================================
+        // 3. HYBRID MONTH FILTER (Handles '01', '1', '/1/', and '-01-')
+        // ======================================================================
         if ($selectedMonth !== 'all') {
-            $formattedMonth = str_pad($selectedMonth, 2, '0', STR_PAD_LEFT);
-            $query->where(function($q) use ($selectedMonth, $formattedMonth, $selectedYear) {
-                $q->where('Delivery_Date', 'LIKE', '%/' . $selectedMonth . '/' . $selectedYear . '%')
-                  ->orWhere('Delivery_Date', 'LIKE', '%/' . $formattedMonth . '/' . $selectedYear . '%');
+            $singleMonth = (int)$selectedMonth; 
+            $paddedMonth = str_pad($selectedMonth, 2, '0', STR_PAD_LEFT); 
+            
+            $query->where(function($q) use ($singleMonth, $paddedMonth, $selectedYear) {
+                // Slash text-string format matching (e.g., /1/2023 or /01/2023)
+                $q->where('Delivery_Date', 'LIKE', '%/' . $singleMonth . '/' . $selectedYear . '%')
+                  ->orWhere('Delivery_Date', 'LIKE', '%/' . $paddedMonth . '/' . $selectedYear . '%')
+                  // Hyphen native database format matching (e.g., 2024-01-)
+                  ->orWhere('Delivery_Date', 'LIKE', $selectedYear . '-' . $paddedMonth . '%')
+                  ->orWhere('Create_Time', 'LIKE', $selectedYear . '-' . $paddedMonth . '%');
             });
         }
 
+        // ======================================================================
         // 4. Core Metrics Calculations
+        // ======================================================================
         $totalParcel = (clone $query)->count();
         $totalWeight = (clone $query)->sum('Original_Weight') ?: 0;
         $avgWeight   = (clone $query)->avg('Original_Weight') ?: 0;
         $delivered   = (clone $query)->where('Order_Granular_Status', 'LIKE', '%DELIVERED%')->count();
 
-        // 5. STATES DISTRIBUTION (Normalizing State Names for Map Layers)
+        // ======================================================================
+        // 5. Regional States Distribution
+        // ======================================================================
         $stateStats = (clone $query)
             ->select('L1_Name as state', DB::raw('COUNT(*) as total'))
             ->groupBy('L1_Name')
@@ -47,20 +71,23 @@ class DashboardController extends Controller
         $normalizedLabels = [];
         $normalizedData = [];
         foreach ($stateStats as $row) {
-            $name = strtoupper(trim($row->state));
-            
-            if ($name === 'PULAU PINANG') $name = 'PENANG';
-            if ($name === 'KUALA LUMPUR') $name = 'W.P. KUALA LUMPUR';
-            if ($name === 'LABUAN') $name = 'W.P. LABUAN';
-            if ($name === 'PUTRAJAYA') $name = 'W.P. PUTRAJAYA';
-            
-            $normalizedLabels[] = $name;
-            $normalizedData[] = $row->total;
+            if (!empty($row->state)) {
+                $name = strtoupper(trim($row->state));
+                if ($name === 'PULAU PINANG') $name = 'PENANG';
+                if ($name === 'KUALA LUMPUR') $name = 'W.P. KUALA LUMPUR';
+                if ($name === 'LABUAN')       $name = 'W.P. LABUAN';
+                if ($name === 'PUTRAJAYA')    $name = 'W.P. PUTRAJAYA';
+                
+                $normalizedLabels[] = $name;
+                $normalizedData[] = $row->total;
+            }
         }
         $stateLabels = $normalizedLabels;
         $stateData = $normalizedData;
 
+        // ======================================================================
         // 6. Parcel Size Distribution
+        // ======================================================================
         $sizeStats = (clone $query)
             ->select('Parcel_Size_ID as size', DB::raw('COUNT(*) as total'))
             ->groupBy('Parcel_Size_ID')
@@ -68,21 +95,34 @@ class DashboardController extends Controller
         $sizeLabels = $sizeStats->pluck('size');
         $sizeData = $sizeStats->pluck('total');
 
-        // 7. BULLETPROOF TREND LINE (String-Based Splitting - Ignores Hidden Corrupted Spaces)
+        // ======================================================================
+        // 7. FIXED HYBRID TREND LINE ENGINE (Extracts month from slashes AND hyphens)
+        // ======================================================================
         DB::statement("SET sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))");
 
         $trend = DB::table($table)
-            ->where('Delivery_Date', 'LIKE', '%' . $selectedYear . '%')
+            ->where(function($q) use ($selectedYear) {
+                $q->where('Delivery_Date', 'LIKE', '%' . $selectedYear . '%')
+                  ->orWhere('Create_Time', 'LIKE', '%' . $selectedYear . '%');
+            })
             ->select(
-                // Extracts the middle month characters between the slashes using clean string separation
-                DB::raw("LPAD(TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(Delivery_Date, '/', 2), '/', -1)), 2, '0') as month_num"),
+                DB::raw("CASE 
+                    WHEN Delivery_Date LIKE '%/%' THEN LPAD(TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(Delivery_Date, '/', 2), '/', -1)), 2, '0')
+                    WHEN Delivery_Date LIKE '%-%' THEN SUBSTRING(Delivery_Date, 6, 2)
+                    WHEN Create_Time LIKE '%-%' THEN SUBSTRING(Create_Time, 6, 2)
+                    ELSE '01'
+                END as month_num"),
                 DB::raw("COUNT(*) as total")
             )
-            ->groupBy(DB::raw("LPAD(TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(Delivery_Date, '/', 2), '/', -1)), 2, '0')"))
+            ->groupBy(DB::raw("CASE 
+                    WHEN Delivery_Date LIKE '%/%' THEN LPAD(TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(Delivery_Date, '/', 2), '/', -1)), 2, '0')
+                    WHEN Delivery_Date LIKE '%-%' THEN SUBSTRING(Delivery_Date, 6, 2)
+                    WHEN Create_Time LIKE '%-%' THEN SUBSTRING(Create_Time, 6, 2)
+                    ELSE '01'
+                END"))
             ->orderBy('month_num', 'asc') 
             ->get();
 
-        // Map numeric strings back to clean calendar labels for Chart.js display safely inside Laravel PHP memory
         $monthMap = [
             '01' => 'January', '02' => 'February', '03' => 'March', '04' => 'April',
             '05' => 'May', '06' => 'June', '07' => 'July', '08' => 'August',
@@ -91,9 +131,7 @@ class DashboardController extends Controller
 
         $trendLabels = [];
         $trendData = [];
-
         foreach ($trend as $row) {
-            // Clean up month string keys to match dictionary pointers securely
             $cleanNum = str_pad(trim($row->month_num), 2, '0', STR_PAD_LEFT);
             if (array_key_exists($cleanNum, $monthMap)) {
                 $trendLabels[] = $monthMap[$cleanNum];
@@ -101,11 +139,29 @@ class DashboardController extends Controller
             }
         }
 
-        // 8. Gender Distribution
-        $genderData = (clone $query)
-            ->select('Gender', DB::raw('count(*) as count'))
+        // ======================================================================
+        // 8. CASE-INSENSITIVE GENDER DISTRIBUTION
+        // ======================================================================
+        $genderRaw = (clone $query)
+            ->select('Gender', DB::raw('COUNT(*) as count'))
+            ->whereNotNull('Gender')
+            ->where('Gender', '!=', '')
             ->groupBy('Gender')
             ->get();
+
+        $genderMap = [];
+        foreach ($genderRaw as $row) {
+            $gName = ucfirst(strtolower(trim($row->Gender)));
+            if ($gName === 'M') $gName = 'Male';
+            if ($gName === 'F') $gName = 'Female';
+            
+            $genderMap[$gName] = ($genderMap[$gName] ?? 0) + $row->count;
+        }
+
+        $genderData = [];
+        foreach ($genderMap as $key => $val) {
+            $genderData[] = (object) ['Gender' => $key, 'count' => $val];
+        }
 
         return view('dashboard', compact(
             'totalParcel', 'totalWeight', 'avgWeight', 'delivered', 
@@ -140,15 +196,11 @@ class DashboardController extends Controller
         ));
     }
 
-    // ==========================================
-    // ⚡ HIGH FREQUENCY OPERATIONAL FLASH ENGINE
-    // ==========================================
     public function flash(Request $request)
     {
         $table = 'ninjavan_data';
         $selectedDate = $request->get('date');
         
-        // Setup initial default system fallback date if blank
         if (!$selectedDate) {
             $latestRow = DB::table($table)->orderBy('id', 'desc')->first();
             $selectedDate = $latestRow ? $latestRow->Delivery_Date : '2023-03-13';
@@ -156,21 +208,18 @@ class DashboardController extends Controller
 
         $cleanedDate = trim($selectedDate);
 
-        // Closure subroutine to process search combinations dynamically
         $fetchRowsClosure = function($targetDate) use ($table) {
             $searchDate1 = $targetDate; 
             $searchDate2 = $targetDate;
             $isoDate = $targetDate;
 
-            // If incoming string format is HTML5 date picker structure (YYYY-MM-DD), transform lookups
             if (strpos($targetDate, '-') !== false && strlen($targetDate) === 10) {
                 try {
                     $time = strtotime($targetDate);
-                    $searchDate1 = date('d/m/Y', $time);  // e.g. 13/03/2023
-                    $searchDate2 = date('j/n/Y', $time);  // e.g. 13/3/2023
+                    $searchDate1 = date('d/m/Y', $time); 
+                    $searchDate2 = date('j/n/Y', $time); 
                 } catch (\Exception $e) {}
             } else if (strpos($targetDate, '/') !== false) {
-                // If target input is formatted via slashes, map inverse ISO format
                 try {
                     $time = strtotime(str_replace('/', '-', $targetDate));
                     $isoDate = date('Y-m-d', $time);
@@ -186,7 +235,6 @@ class DashboardController extends Controller
                       ->orWhere('Delivery_Date', 'LIKE', $searchDate2 . '%')
                       ->orWhere('Delivery_Date', 'LIKE', $isoDate . '%');
                     
-                    // Hyphen variant match fallbacks
                     $hyphen1 = str_replace('/', '-', $searchDate1);
                     $hyphen2 = str_replace('/', '-', $searchDate2);
                     $q->orWhere('Delivery_Date', 'LIKE', $hyphen1 . '%')
@@ -195,11 +243,8 @@ class DashboardController extends Controller
                 ->get();
         };
 
-        // Execution path 1: query native selected data
         $flashRows = $fetchRowsClosure($cleanedDate);
 
-        // AUTOMATIC FALLBACK DISCOVERY SCHEMA
-        // If data matrix is completely empty, auto-discover closest row containing viable logs
         if ($flashRows->count() === 0) {
             try {
                 $searchYear = '2023';
@@ -228,14 +273,10 @@ class DashboardController extends Controller
             } catch (\Exception $e) {}
         }
 
-        // Calculate metrics safely
         $totalParcels = $flashRows->count();
-        $totalWeight = $flashRows->sum(function($row) {
-            return (float) ($row->Original_Weight ?? 0);
-        });
+        $totalWeight = $flashRows->sum(function($row) { return (float) ($row->Original_Weight ?? 0); });
         $avgWeight = $totalParcels > 0 ? ($totalWeight / $totalParcels) : 0;
 
-        // Group regional state destination distributions
         $stateBreakdown = [];
         foreach ($flashRows as $row) {
             if (!empty($row->L1_Name)) {
@@ -250,7 +291,6 @@ class DashboardController extends Controller
         }
         arsort($stateBreakdown);
 
-        // Classify system sizes profiles mix
         $sizes = ['Small' => 0, 'Other' => 0];
         foreach ($flashRows as $row) {
             if (isset($row->Parcel_Size_ID) && $row->Parcel_Size_ID == 1) {
@@ -260,9 +300,6 @@ class DashboardController extends Controller
             }
         }
 
-        return view('flash', compact(
-            'selectedDate', 'totalParcels', 'totalWeight', 
-            'avgWeight', 'stateBreakdown', 'sizes'
-        ));
+        return view('flash', compact('selectedDate', 'totalParcels', 'totalWeight', 'avgWeight', 'stateBreakdown', 'sizes'));
     }
 }
