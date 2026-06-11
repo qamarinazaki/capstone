@@ -4,8 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
+use Exception;
 
 class ChatBotController extends Controller
 {
@@ -16,20 +17,30 @@ class ChatBotController extends Controller
 
     public function message(Request $request)
     {
-        // Get raw message input
         $rawMessage = $request->input('message');
         if (empty($rawMessage)) {
             return response()->json(['reply' => "I'm listening! Please type an operational query."]);
         }
 
-        // SANITIZATION LAYER: Strip out quotation marks and trim spaces
+        // Clean text markers & normalize casing
         $message = str_replace(['"', "'", '“', '”', '‘', '’'], '', $rawMessage);
         $message = strtolower(trim($message));
 
-        // 1. ADVANCED DATE PARSING LAYER (DD/MM/YYYY STRING EXTRACTOR)
+        // 1. ADVANCED LOGISTICS DATE PARSING LAYER (Expanded to capture years up to 2029)
         $year = null;
-        if (preg_match('/\b(202[2-6])\b/', $message, $matches)) {
+        if (preg_match('/\b(202[3-9])\b/', $message, $matches)) {
             $year = $matches[1];
+        }
+
+        // CATCH 2025 QUERIES EARLY
+        if ($year === '2025') {
+            return response()->json([
+                'reply' => "### 2025 Dataset Status: Pending Import\n" .
+                           "The logistics metrics matrix for **2025 Operations** has not been imported into the database tables yet.\n\n" .
+                           "Currently, I can assist you with our active historical records (**2023** & **2024**) or future layout planning (**2026**)! Try asking:\n" .
+                           "* *\"What is our total parcel count in Pahang for 2024?\"*\n" .
+                           "* *\"Show me the total parcel count in Terengganu for 2023\"*"
+            ]);
         }
 
         $month = null;
@@ -60,7 +71,7 @@ class ChatBotController extends Controller
             }
         }
 
-        // 2. MALAYSIAN GEOGRAPHIC STATE DETECTION
+        // 2. MALAYSIAN GEOGRAPHIC STATE DETECTION ENGINE
         $states = [
             'johor', 'kedah', 'kelantan', 'melaka', 'negeri sembilan', 
             'pahang', 'perak', 'perlis', 'pulau pinang', 'penang', 
@@ -74,7 +85,7 @@ class ChatBotController extends Controller
             }
         }
 
-        // 3. TOKEN DICTIONARIES FOR BALANCED ROUTING
+        // 3. LOGISTICS KEYWORD MATCH SCORE DICTIONARY
         $cleanTokenString = str_replace(['?', '!', '.', ',', '/', '-'], ' ', $message);
         $tokens = explode(' ', $cleanTokenString);
         $tokens = array_filter(array_map('trim', $tokens)); 
@@ -89,167 +100,188 @@ class ChatBotController extends Controller
         $deliveryScore = count(array_intersect($tokens, $deliveryKeywords));
         $feedbackScore = count(array_intersect($tokens, $feedbackKeywords));
 
-        // 4. LOCAL DATABASE EXECUTION LAYER ROUTING
+        $totalDatabaseScore = $parcelScore + $weightScore + $deliveryScore + $feedbackScore;
 
-        // --- PARCEL VOLUME MATCH ---
-        if ($parcelScore > 0 && $parcelScore >= max($weightScore, $deliveryScore, $feedbackScore)) {
-            $query = DB::table('ninjavan_data');
-            if ($year) {
-                if ($month) {
-                    $query->where(function($q) use ($month, $altMonth, $year) {
-                        $q->where('Delivery_Date', 'LIKE', '%/' . $month . '/' . $year)
-                          ->orWhere('Delivery_Date', 'LIKE', '%/' . $altMonth . '/' . $year);
-                    });
-                } else {
-                    $query->where('Delivery_Date', 'LIKE', '%/' . $year);
+        // =========================================================================
+        // 📊 ROUTE A: RUN DATABASE LOOKUPS (EXECUTES IF INTENT IS CLEARLY QUANTITATIVE)
+        // =========================================================================
+        if ($totalDatabaseScore > 0) {
+            try {
+                $dbColumns = [
+                    'state'          => 'L1_Name',              
+                    'delivery_date'  => 'Delivery_Date',        
+                    'weight'         => 'Original_Weight',      
+                    'status'         => 'Order_Granular_Status' 
+                ];
+
+                // --- SECTION A: PARCEL COUNT DATA ---
+                if ($parcelScore > 0 && $parcelScore >= max($weightScore, $deliveryScore, $feedbackScore)) {
+                    if (Schema::hasTable('ninjavan_data')) {
+                        // Only target database if looking for historical, existing metrics parameters
+                        if ($year === null || $year <= 2024) {
+                            $query = DB::table('ninjavan_data');
+                            if ($year) {
+                                if ($month) {
+                                    $query->where(function($q) use ($month, $altMonth, $year, $dbColumns) {
+                                        $q->where($dbColumns['delivery_date'], 'LIKE', '%/' . $month . '/' . $year)
+                                          ->orWhere($dbColumns['delivery_date'], 'LIKE', '%/' . $altMonth . '/' . $year)
+                                          ->orWhere($dbColumns['delivery_date'], 'LIKE', $year . '-' . $month . '-%');
+                                    });
+                                } else {
+                                    $query->where(function($q) use ($year, $dbColumns) {
+                                        $q->where($dbColumns['delivery_date'], 'LIKE', '%/' . $year)
+                                          ->orWhere($dbColumns['delivery_date'], 'LIKE', $year . '-%');
+                                    });
+                                }
+                            }
+                            if ($detectedState) {
+                                $query->where($dbColumns['state'], 'LIKE', '%' . $detectedState . '%');
+                            }
+                            
+                            $count = $query->count();
+                            $contextStr = ($monthName ? $monthName . ' ' : '') . ($year ? $year : 'All Historical Records');
+                            $stateStr = $detectedState ? " within **" . ucwords($detectedState) . "**" : "";
+                            
+                            return response()->json([
+                                'reply' => "### Logistics Volume Inventory Report\nOur system records indicate a total metric volume of **" . number_format($count) . " parcels** logged for **" . $contextStr . "**" . $stateStr . "."
+                            ]);
+                        }
+                    }
                 }
-            }
-            if ($detectedState) {
-                $query->where('Recipient_State', 'LIKE', '%' . $detectedState . '%');
-            }
-            $count = $query->count();
-            if ($count > 0) {
-                $contextStr = ($monthName ? $monthName . ' ' : '') . ($year ? $year : 'Historical Timeline');
-                $stateStr = $detectedState ? " within **" . ucfirst($detectedState) . "**" : "";
-                return response()->json(['reply' => "Our shipping metrics indicate **" . number_format($count) . " parcels** were logged for **" . $contextStr . "**" . $stateStr . "."]);
-            }
-        }
 
-        // --- WEIGHT MATCH ---
-        if ($weightScore > 0 && $weightScore >= max($parcelScore, $deliveryScore, $feedbackScore)) {
-            $query = DB::table('ninjavan_data');
-            if ($year) {
-                if ($month) {
-                    $query->where(function($q) use ($month, $altMonth, $year) {
-                        $q->where('Delivery_Date', 'LIKE', '%/' . $month . '/' . $year)
-                          ->orWhere('Delivery_Date', 'LIKE', '%/' . $altMonth . '/' . $year);
-                    });
-                } else {
-                    $query->where('Delivery_Date', 'LIKE', '%/' . $year);
+                // --- SECTION B: PACKAGING CARGO WEIGHT DATA ---
+                if ($weightScore > 0 && $weightScore >= max($parcelScore, $deliveryScore, $feedbackScore)) {
+                    if (Schema::hasTable('ninjavan_data')) {
+                        if ($year === null || $year <= 2024) {
+                            $query = DB::table('ninjavan_data');
+                            if ($year) {
+                                if ($month) {
+                                    $query->where(function($q) use ($month, $altMonth, $year, $dbColumns) {
+                                        $q->where($dbColumns['delivery_date'], 'LIKE', '%/' . $month . '/' . $year)
+                                          ->orWhere($dbColumns['delivery_date'], 'LIKE', '%/' . $altMonth . '/' . $year)
+                                          ->orWhere($dbColumns['delivery_date'], 'LIKE', $year . '-' . $month . '-%');
+                                    });
+                                } else {
+                                    $query->where(function($q) use ($year, $dbColumns) {
+                                        $q->where($dbColumns['delivery_date'], 'LIKE', '%/' . $year)
+                                          ->orWhere($dbColumns['delivery_date'], 'LIKE', $year . '-%');
+                                    });
+                                }
+                            }
+                            if ($detectedState) {
+                                $query->where($dbColumns['state'], 'LIKE', '%' . $detectedState . '%');
+                            }
+                            
+                            $avg = $query->avg($dbColumns['weight']) ?? 0;
+                            $contextStr = ($monthName ? $monthName . ' ' : '') . ($year ? $year : 'All Historical Records');
+                            $stateStr = $detectedState ? " within **" . ucwords($detectedState) . "**" : "";
+                            
+                            return response()->json([
+                                'reply' => "### Physical Logistics Cargo Report\nDuring **" . $contextStr . "**" . $stateStr . ", the calculated mean average gross freight mass across items was **" . number_format($avg, 2) . " kg** per package unit."
+                            ]);
+                        }
+                    }
                 }
-            }
-            $avg = $query->avg('Original_Weight') ?? 0;
-            if ($avg > 0) {
-                $contextStr = ($monthName ? $monthName . ' ' : '') . ($year ? $year : 'Historical Timeline');
-                return response()->json(['reply' => "During **" . $contextStr . "**, the calculated average freight cargo mass was **" . number_format($avg, 2) . " kg** per transit package."]);
-            }
-        }
 
-        // --- DELIVERY STATUS MATCH ---
-        if ($deliveryScore > 0 && $deliveryScore >= max($parcelScore, $weightScore, $feedbackScore)) {
-            $query = DB::table('ninjavan_data')->where('Order_Granular_Status', 'LIKE', '%DELIVERED%');
-            if ($year) {
-                if ($month) {
-                    $query->where(function($q) use ($month, $altMonth, $year) {
-                        $q->where('Delivery_Date', 'LIKE', '%/' . $month . '/' . $year)
-                          ->orWhere('Delivery_Date', 'LIKE', '%/' . $altMonth . '/' . $year);
-                    });
-                } else {
-                    $query->where('Delivery_Date', 'LIKE', '%/' . $year);
+                // --- SECTION C: FULFILLMENT STATUS DELIVERY DATA ---
+                if ($deliveryScore > 0 && $deliveryScore >= max($parcelScore, $weightScore, $feedbackScore)) {
+                    if (Schema::hasTable('ninjavan_data')) {
+                        if ($year === null || $year <= 2024) {
+                            $query = DB::table('ninjavan_data')->where($dbColumns['status'], 'LIKE', '%DELIVERED%');
+                            if ($year) {
+                                if ($month) {
+                                    $query->where(function($q) use ($month, $altMonth, $year, $dbColumns) {
+                                        $q->where($dbColumns['delivery_date'], 'LIKE', '%/' . $month . '/' . $year)
+                                          ->orWhere($dbColumns['delivery_date'], 'LIKE', '%/' . $altMonth . '/' . $year)
+                                          ->orWhere($dbColumns['delivery_date'], 'LIKE', $year . '-' . $month . '-%');
+                                    });
+                                } else {
+                                    $query->where(function($q) use ($year, $dbColumns) {
+                                        $q->where($dbColumns['delivery_date'], 'LIKE', '%/' . $year)
+                                          ->orWhere($dbColumns['delivery_date'], 'LIKE', $year . '-%');
+                                    });
+                                }
+                            }
+                            if ($detectedState) {
+                                $query->where($dbColumns['state'], 'LIKE', '%' . $detectedState . '%');
+                            }
+                            
+                            $count = $query->count();
+                            $contextStr = ($monthName ? $monthName . ' ' : '') . ($year ? $year : 'All Historical Records');
+                            $stateStr = $detectedState ? " within **" . ucwords($detectedState) . "**" : "";
+                            
+                            return response()->json([
+                                'reply' => "### Operational Fulfillment Metrics Summary\nFulfillment tracing verifies **" . number_format($count) . " successful deliveries** successfully processed for **" . $contextStr . "**" . $stateStr . "."
+                            ]);
+                        }
+                    }
                 }
-            }
-            $count = $query->count();
-            if ($count > 0) {
-                $contextStr = ($monthName ? $monthName . ' ' : '') . ($year ? $year : 'Historical Timeline');
-                return response()->json(['reply' => "Fulfillment metrics confirm **" . number_format($count) . " successful deliveries** recorded across **" . $contextStr . "**. "]);
-            }
-        }
 
-        // --- CUSTOMER RATING MATCH ---
-        if ($feedbackScore > 0) {
-            $count = DB::table('customer_ratings')->count();
-            if ($count > 0) {
-                $avgPunctuality = DB::table('customer_ratings')->avg('rating_punctuality') ?? 0;
-                $avgCondition   = DB::table('customer_ratings')->avg('rating_condition') ?? 0;
-                $avgAttitude    = DB::table('customer_ratings')->avg('rating_attitude') ?? 0;
+                // --- SECTION D: CUSTOMER SATISFACTION SURVEY RATINGS ---
+                if ($feedbackScore > 0) {
+                    if (Schema::hasTable('customer_ratings')) {
+                        $count = DB::table('customer_ratings')->count();
+                        if ($count > 0) {
+                            $avgPunctuality = DB::table('customer_ratings')->avg('rating_punctuality') ?? 0;
+                            $avgCondition   = DB::table('customer_ratings')->avg('rating_condition') ?? 0;
+                            $avgAttitude    = DB::table('customer_ratings')->avg('rating_attitude') ?? 0;
 
-                return response()->json([
-                    'reply' => "### Customer Evaluation & Satisfaction Summary Report\n" .
-                               "Calculated across **" . number_format($count) . " active survey respondents**:\n\n" .
-                               "* **Courier Service Speed / Punctuality Rating:** " . number_format($avgPunctuality, 1) . " / 5.0 ★\n" .
-                               "* **Package Condition / Quality Assurance:** " . number_format($avgCondition, 1) . " / 5.0 ★\n" .
-                               "* **Rider Conduct / Professionalism Attitude:** " . number_format($avgAttitude, 1) . " / 5.0 ★"
-                ]);
+                            return response()->json([
+                                'reply' => "### Customer Satisfaction Index (CSI) Summary Report\nAggregated metrics compiled across **" . number_format($count) . " submitted client reviews**:\n\n* **Transit Speed / Punctuality Rating:** " . number_format($avgPunctuality, 1) . " / 5.0 ★\n* **Parcel Condition / Quality Control Handling:** " . number_format($avgCondition, 1) . " / 5.0 ★\n* **Courier Professionalism / Rider Conduct:** " . number_format($avgAttitude, 1) . " / 5.0 ★"
+                            ]);
+                        }
+                    }
+                }
+
+            } catch (Exception $e) {
+                logger()->error('Local Database Error: ' . $e->getMessage());
             }
         }
 
         // =========================================================================
-        // 5. LIVE GENERATIVE AI CORE LAYER (STABLE PRODUCTION ROUTING)
+        // 🌐 ROUTE B: GENERAL CONVERSATION -> REDIRECT TO GEMINI LIVE API
         // =========================================================================
-        
-        $apiKey = env('GEMINI_API_KEY', 'AQ.Ab8RN6LJbb24_nd2LUMVtRuGp_03mN7GfQ5GTF7Bd9EdBUXTnQ');
+        $apiKey = env('GEMINI_API_KEY');
 
-        $systemPrompt = "You are the integrated core AI intelligence engine for NinjaVault, an advanced secure smart logistics ecosystem. "
-                      . "Your purpose is to answer user questions with high clarity and technical precision. "
-                      . "Answer general questions like 'What is the objective of this dashboard?' by explaining that NinjaVault provides comprehensive tracking, "
-                      . "parcel metrics analytics, shipping volumes, and customer satisfaction monitoring in one secure management dashboard. "
-                      . "Keep your answers highly professional, clean, and concise.";
+        if (!empty($apiKey)) {
+            try {
+                $cleanKey = trim(str_replace(['"', "'"], '', $apiKey));
 
-        try {
-            // STEP A: Request clean, stable baseline 'gemini-1.5-flash' without version suffixes
-            $response = Http::withoutVerifying()->withHeaders([
-                'Content-Type' => 'application/json'
-            ])->post("https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=" . trim($apiKey), [
-                'contents' => [
-                    [
-                        'parts' => [
-                            ['text' => $systemPrompt . "\n\nUser Question: " . $rawMessage]
-                        ]
-                    ]
-                ]
-            ]);
-
-            if ($response->successful()) {
-                $aiOutputData = $response->json();
-                $generatedText = $aiOutputData['candidates'][0]['content']['parts'][0]['text'] ?? null;
-
-                if (!empty($generatedText)) {
-                    return response()->json(['reply' => trim($generatedText)]);
-                }
-            }
-
-            // STEP B: Fallback deployment handling if the enterprise account requires upgraded modern engines (2.5 generation)
-            if ($response->status() == 404) {
-                $backupResponse = Http::withoutVerifying()->withHeaders([
+                $response = Http::withHeaders([
                     'Content-Type' => 'application/json'
-                ])->post("https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=" . trim($apiKey), [
+                ])->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" . $cleanKey, [
                     'contents' => [
                         [
                             'parts' => [
-                                ['text' => $systemPrompt . "\n\nUser Question: " . $rawMessage]
+                                ['text' => "You are NinjaVault Core Intelligence, a helpful analytics dashboard assistant for our internal NinjaVan tracking system. Write a brief, professional response answering this user query: " . $rawMessage]
                             ]
                         ]
                     ]
                 ]);
 
-                if ($backupResponse->successful()) {
-                    $aiOutputData = $backupResponse->json();
-                    $generatedText = $aiOutputData['candidates'][0]['content']['parts'][0]['text'] ?? null;
+                if ($response->successful()) {
+                    $aiData = $response->json();
+                    $aiReply = $aiData['candidates'][0]['content']['parts'][0]['text'] ?? null;
 
-                    if (!empty($generatedText)) {
-                        return response()->json(['reply' => trim($generatedText)]);
+                    if (!empty($aiReply)) {
+                        return response()->json(['reply' => $aiReply]);
                     }
+                } else {
+                    logger()->error('Gemini API Error Payload: ' . $response->body());
                 }
-
-                return response()->json([
-                    'reply' => "### Google API Handshake Interrupted\n" .
-                               "* **HTTP Status Code:** " . $backupResponse->status() . "\n" .
-                               "* **Raw Gateway Explanation:** " . $backupResponse->body()
-                ]);
+            } catch (Exception $e) {
+                logger()->error('Gemini API Network Exception: ' . $e->getMessage());
             }
-
-            // Diagnostic reporting block for unexpected infrastructure messaging
-            return response()->json([
-                'reply' => "### Google API Handshake Interrupted\n" .
-                           "* **HTTP Status Code:** " . $response->status() . "\n" .
-                           "* **Raw Gateway Explanation:** " . $response->body()
-            ]);
-
-        } catch (\Exception $ex) {
-            return response()->json([
-                'reply' => "### Runtime Network Exception Traced\n" .
-                           "* **Exception Message:** " . $ex->getMessage()
-            ]);
         }
+
+        // =========================================================================
+        // 🛑 ROUTE C: CRITICAL FALLBACK SYSTEM (Runs if API key is blank/failed)
+        // =========================================================================
+        return response()->json([
+            'reply' => "### NinjaVault Core Intelligence\n" .
+                       "I was unable to process your request through our AI core service. If you are tracking database matrices, please formulate queries using parameters like:\n\n" .
+                       "* *\"What is our total parcel count in Terengganu for 2023?\"*\n" .
+                       "* *\"Show customer survey satisfaction score summary\"*"
+        ]);
     }
 }
