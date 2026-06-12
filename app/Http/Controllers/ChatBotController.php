@@ -26,21 +26,10 @@ class ChatBotController extends Controller
         $message = str_replace(['"', "'", '“', '”', '‘', '’'], '', $rawMessage);
         $message = strtolower(trim($message));
 
-        // 1. ADVANCED LOGISTICS DATE PARSING LAYER (Expanded to capture years up to 2029)
+        // 1. ADVANCED LOGISTICS DATE PARSING LAYER (Captures years 2023 up to 2029)
         $year = null;
         if (preg_match('/\b(202[3-9])\b/', $message, $matches)) {
             $year = $matches[1];
-        }
-
-        // CATCH 2025 QUERIES EARLY
-        if ($year === '2025') {
-            return response()->json([
-                'reply' => "### 2025 Dataset Status: Pending Import\n" .
-                           "The logistics metrics matrix for **2025 Operations** has not been imported into the database tables yet.\n\n" .
-                           "Currently, I can assist you with our active historical records (**2023** & **2024**) or future layout planning (**2026**)! Try asking:\n" .
-                           "* *\"What is our total parcel count in Pahang for 2024?\"*\n" .
-                           "* *\"Show me the total parcel count in Terengganu for 2023\"*"
-            ]);
         }
 
         $month = null;
@@ -103,7 +92,7 @@ class ChatBotController extends Controller
         $totalDatabaseScore = $parcelScore + $weightScore + $deliveryScore + $feedbackScore;
 
         // =========================================================================
-        // 📊 ROUTE A: RUN DATABASE LOOKUPS (EXECUTES IF INTENT IS CLEARLY QUANTITATIVE)
+        // 📊 ROUTE A: RUN DATABASE LOOKUPS (DYNAMICAL TO CHOSEN PARAMETERS)
         // =========================================================================
         if ($totalDatabaseScore > 0) {
             try {
@@ -117,28 +106,30 @@ class ChatBotController extends Controller
                 // --- SECTION A: PARCEL COUNT DATA ---
                 if ($parcelScore > 0 && $parcelScore >= max($weightScore, $deliveryScore, $feedbackScore)) {
                     if (Schema::hasTable('ninjavan_data')) {
-                        // Only target database if looking for historical, existing metrics parameters
-                        if ($year === null || $year <= 2024) {
-                            $query = DB::table('ninjavan_data');
-                            if ($year) {
-                                if ($month) {
-                                    $query->where(function($q) use ($month, $altMonth, $year, $dbColumns) {
-                                        $q->where($dbColumns['delivery_date'], 'LIKE', '%/' . $month . '/' . $year)
-                                          ->orWhere($dbColumns['delivery_date'], 'LIKE', '%/' . $altMonth . '/' . $year)
-                                          ->orWhere($dbColumns['delivery_date'], 'LIKE', $year . '-' . $month . '-%');
-                                    });
-                                } else {
-                                    $query->where(function($q) use ($year, $dbColumns) {
-                                        $q->where($dbColumns['delivery_date'], 'LIKE', '%/' . $year)
-                                          ->orWhere($dbColumns['delivery_date'], 'LIKE', $year . '-%');
-                                    });
-                                }
+                        $query = DB::table('ninjavan_data');
+                        
+                        if ($year) {
+                            if ($month) {
+                                $query->where(function($q) use ($month, $altMonth, $year, $dbColumns) {
+                                    $q->where($dbColumns['delivery_date'], 'LIKE', '%/' . $month . '/' . $year)
+                                      ->orWhere($dbColumns['delivery_date'], 'LIKE', '%/' . $altMonth . '/' . $year)
+                                      ->orWhere($dbColumns['delivery_date'], 'LIKE', $year . '-' . $month . '-%');
+                                });
+                            } else {
+                                $query->where(function($q) use ($year, $dbColumns) {
+                                    $q->where($dbColumns['delivery_date'], 'LIKE', '%/' . $year)
+                                      ->orWhere($dbColumns['delivery_date'], 'LIKE', $year . '-%');
+                                });
                             }
-                            if ($detectedState) {
-                                $query->where($dbColumns['state'], 'LIKE', '%' . $detectedState . '%');
-                            }
-                            
-                            $count = $query->count();
+                        }
+                        if ($detectedState) {
+                            $query->where($dbColumns['state'], 'LIKE', '%' . $detectedState . '%');
+                        }
+                        
+                        $count = $query->count();
+
+                        // Dynamic evaluation block: If rows exist, return data. If 0 records exist for a future year (e.g. 2026), fall through to Gemini API.
+                        if ($count > 0 || $year === '2023' || $year === '2024' || $year === '2025') {
                             $contextStr = ($monthName ? $monthName . ' ' : '') . ($year ? $year : 'All Historical Records');
                             $stateStr = $detectedState ? " within **" . ucwords($detectedState) . "**" : "";
                             
@@ -152,27 +143,30 @@ class ChatBotController extends Controller
                 // --- SECTION B: PACKAGING CARGO WEIGHT DATA ---
                 if ($weightScore > 0 && $weightScore >= max($parcelScore, $deliveryScore, $feedbackScore)) {
                     if (Schema::hasTable('ninjavan_data')) {
-                        if ($year === null || $year <= 2024) {
-                            $query = DB::table('ninjavan_data');
-                            if ($year) {
-                                if ($month) {
-                                    $query->where(function($q) use ($month, $altMonth, $year, $dbColumns) {
-                                        $q->where($dbColumns['delivery_date'], 'LIKE', '%/' . $month . '/' . $year)
-                                          ->orWhere($dbColumns['delivery_date'], 'LIKE', '%/' . $altMonth . '/' . $year)
-                                          ->orWhere($dbColumns['delivery_date'], 'LIKE', $year . '-' . $month . '-%');
-                                    });
-                                } else {
-                                    $query->where(function($q) use ($year, $dbColumns) {
-                                        $q->where($dbColumns['delivery_date'], 'LIKE', '%/' . $year)
-                                          ->orWhere($dbColumns['delivery_date'], 'LIKE', $year . '-%');
-                                    });
-                                }
+                        $query = DB::table('ninjavan_data');
+                        
+                        if ($year) {
+                            if ($month) {
+                                $query->where(function($q) use ($month, $altMonth, $year, $dbColumns) {
+                                    $q->where($dbColumns['delivery_date'], 'LIKE', '%/' . $month . '/' . $year)
+                                      ->orWhere($dbColumns['delivery_date'], 'LIKE', '%/' . $altMonth . '/' . $year)
+                                      ->orWhere($dbColumns['delivery_date'], 'LIKE', $year . '-' . $month . '-%');
+                                });
+                            } else {
+                                $query->where(function($q) use ($year, $dbColumns) {
+                                    $q->where($dbColumns['delivery_date'], 'LIKE', '%/' . $year)
+                                      ->orWhere($dbColumns['delivery_date'], 'LIKE', $year . '-%');
+                                });
                             }
-                            if ($detectedState) {
-                                $query->where($dbColumns['state'], 'LIKE', '%' . $detectedState . '%');
-                            }
-                            
-                            $avg = $query->avg($dbColumns['weight']) ?? 0;
+                        }
+                        if ($detectedState) {
+                            $query->where($dbColumns['state'], 'LIKE', '%' . $detectedState . '%');
+                        }
+                        
+                        $avg = $query->avg($dbColumns['weight']) ?? 0;
+                        $countCheck = $query->count();
+
+                        if ($countCheck > 0 || $year === '2023' || $year === '2024' || $year === '2025') {
                             $contextStr = ($monthName ? $monthName . ' ' : '') . ($year ? $year : 'All Historical Records');
                             $stateStr = $detectedState ? " within **" . ucwords($detectedState) . "**" : "";
                             
@@ -186,27 +180,29 @@ class ChatBotController extends Controller
                 // --- SECTION C: FULFILLMENT STATUS DELIVERY DATA ---
                 if ($deliveryScore > 0 && $deliveryScore >= max($parcelScore, $weightScore, $feedbackScore)) {
                     if (Schema::hasTable('ninjavan_data')) {
-                        if ($year === null || $year <= 2024) {
-                            $query = DB::table('ninjavan_data')->where($dbColumns['status'], 'LIKE', '%DELIVERED%');
-                            if ($year) {
-                                if ($month) {
-                                    $query->where(function($q) use ($month, $altMonth, $year, $dbColumns) {
-                                        $q->where($dbColumns['delivery_date'], 'LIKE', '%/' . $month . '/' . $year)
-                                          ->orWhere($dbColumns['delivery_date'], 'LIKE', '%/' . $altMonth . '/' . $year)
-                                          ->orWhere($dbColumns['delivery_date'], 'LIKE', $year . '-' . $month . '-%');
-                                    });
-                                } else {
-                                    $query->where(function($q) use ($year, $dbColumns) {
-                                        $q->where($dbColumns['delivery_date'], 'LIKE', '%/' . $year)
-                                          ->orWhere($dbColumns['delivery_date'], 'LIKE', $year . '-%');
-                                    });
-                                }
+                        $query = DB::table('ninjavan_data')->where($dbColumns['status'], 'LIKE', '%DELIVERED%');
+                        
+                        if ($year) {
+                            if ($month) {
+                                $query->where(function($q) use ($month, $altMonth, $year, $dbColumns) {
+                                    $q->where($dbColumns['delivery_date'], 'LIKE', '%/' . $month . '/' . $year)
+                                      ->orWhere($dbColumns['delivery_date'], 'LIKE', '%/' . $altMonth . '/' . $year)
+                                      ->orWhere($dbColumns['delivery_date'], 'LIKE', $year . '-' . $month . '-%');
+                                });
+                            } else {
+                                $query->where(function($q) use ($year, $dbColumns) {
+                                    $q->where($dbColumns['delivery_date'], 'LIKE', '%/' . $year)
+                                      ->orWhere($dbColumns['delivery_date'], 'LIKE', $year . '-%');
+                                });
                             }
-                            if ($detectedState) {
-                                $query->where($dbColumns['state'], 'LIKE', '%' . $detectedState . '%');
-                            }
-                            
-                            $count = $query->count();
+                        }
+                        if ($detectedState) {
+                            $query->where($dbColumns['state'], 'LIKE', '%' . $detectedState . '%');
+                        }
+                        
+                        $count = $query->count();
+
+                        if ($count > 0 || $year === '2023' || $year === '2024' || $year === '2025') {
                             $contextStr = ($monthName ? $monthName . ' ' : '') . ($year ? $year : 'All Historical Records');
                             $stateStr = $detectedState ? " within **" . ucwords($detectedState) . "**" : "";
                             
@@ -239,7 +235,7 @@ class ChatBotController extends Controller
         }
 
         // =========================================================================
-        // 🌐 ROUTE B: GENERAL CONVERSATION -> REDIRECT TO GEMINI LIVE API
+        // 🌐 ROUTE B: GENERAL CONVERSATION & INTELLIGENT AI SYSTEM ASSISTANCE
         // =========================================================================
         $apiKey = env('GEMINI_API_KEY');
 
@@ -253,7 +249,7 @@ class ChatBotController extends Controller
                     'contents' => [
                         [
                             'parts' => [
-                                ['text' => "You are NinjaVault Core Intelligence, a helpful analytics dashboard assistant for our internal NinjaVan tracking system. Write a brief, professional response answering this user query: " . $rawMessage]
+                                ['text' => "You are NinjaVault Core Intelligence, a helpful analytics dashboard assistant for our internal NinjaVan tracking system. Write a brief, professional response answering this user query: " . $rawMessage . ". Current Year contextual boundary: 2026. If the user asks about operational predictions or generic layout planning regarding years like 2026 or above, assist them with smart professional analytics speculation."]
                             ]
                         ]
                     ]
@@ -280,7 +276,7 @@ class ChatBotController extends Controller
         return response()->json([
             'reply' => "### NinjaVault Core Intelligence\n" .
                        "I was unable to process your request through our AI core service. If you are tracking database matrices, please formulate queries using parameters like:\n\n" .
-                       "* *\"What is our total parcel count in Terengganu for 2023?\"*\n" .
+                       "* *\"What is our total parcel count in Terengganu for 2025?\"*\n" .
                        "* *\"Show customer survey satisfaction score summary\"*"
         ]);
     }
