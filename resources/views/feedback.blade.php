@@ -1,7 +1,6 @@
 @extends('layouts.app')
 
 @section('content')
-<!-- External Premium Fonts & Icons Assets -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -9,86 +8,101 @@
 
 <style>
     :root {
-        --text-main: #0f172a;
-        --text-muted: #475569;
-        --border-color: rgba(226, 232, 240, 0.4);
+        --text-main: #ffffff; 
+        --text-muted: #cbd5e1; /* Made noticeably brighter for small subheadings */
+        --border-color: rgba(255, 255, 255, 0.1);
         --radius-lg: 16px;
         --radius-md: 12px;
         --font-sans: 'Plus Jakarta Sans', sans-serif;
     }
 
-    /* Immersive Image & Gradient Background Wrapper */
+    /* Uses your sunny rating-bg.png.png illustration as the layout background */
     .dashboard-bg-wrapper {
         position: relative;
         min-height: 100vh;
         padding: 2rem;
-        background-color: #f8fafc; /* Fallback color */
-        /* REPLACE THE URL BELOW WITH YOUR NINJAVAN IMAGE ASSET PATH */
-        background-image: url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=2070&auto=format&fit=crop'); 
+        background-color: #0f172a; 
+        background-image: url('{{ asset("images/rating-bg.png.png") }}'); 
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
     }
 
-    /* Soft overlay to darken/soften the background image for maximum readability */
+    /* A sleek dark translucent mask to balance the bright sunny image with white dashboard text */
     .dashboard-bg-overlay {
         position: absolute;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
-        background: linear-gradient(135deg, rgba(248, 250, 252, 0.92) 0%, rgba(241, 245, 249, 0.85) 100%);
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.75) 0%, rgba(30, 41, 59, 0.7) 100%);
         z-index: 1;
     }
 
-    /* Restores interactive positioning above the background layer */
+    /* Interactive layer positioned safely above background rules */
     .dashboard-relative-content {
         position: relative;
         z-index: 2;
+        font-family: var(--font-sans);
     }
 
-    /* High-End Frosted Glassmorphism Cards */
+    /* Premium Frosted Glassmorphic Dark UI Containers */
     .glass-feedback-card {
-        background: rgba(255, 255, 255, 0.8);
-        backdrop-filter: blur(16px) saturate(120%);
-        -webkit-backdrop-filter: blur(16px) saturate(120%);
-        border: 1px solid rgba(255, 255, 255, 0.6);
+        background: rgba(15, 23, 42, 0.65);
+        backdrop-filter: blur(20px) saturate(140%);
+        -webkit-backdrop-filter: blur(20px) saturate(140%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: var(--radius-lg);
-        box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.01);
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
     }
 
-    /* Micro Tracking Counter Pill Units */
+    /* Header Tracking Pill Targets */
     .counter-badge-pill {
-        background: rgba(255, 255, 255, 0.9);
+        background: rgba(15, 23, 42, 0.7);
         backdrop-filter: blur(8px);
         border: 1px solid var(--border-color);
         border-radius: var(--radius-md);
         padding: 0.6rem 1.2rem;
         text-align: center;
         min-width: 140px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
     }
 
-    /* Core Rating Matrix Metric Top Accents */
+    /* Top Tier Metrics Accent Highlights */
     .metric-top-strip {
-        background: rgba(255, 255, 255, 0.85);
+        background: rgba(15, 23, 42, 0.7);
         backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: var(--radius-lg);
         text-align: center;
         padding: 1.5rem 1rem;
-        box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.02);
-        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
+        box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.3);
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
     .metric-top-strip:hover {
         transform: translateY(-4px);
-        box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.08);
     }
-    .metric-top-strip.blue-accent { border-top: 4px solid #2563eb; }
-    .metric-top-strip.green-accent { border-top: 4px solid #16a34a; }
+    .metric-top-strip.blue-accent { border-top: 4px solid #3b82f6; }
+    .metric-top-strip.green-accent { border-top: 4px solid #22c55e; }
     .metric-top-strip.cyan-accent { border-top: 4px solid #06b6d4; }
 
-    /* Dynamically Managed Badges for Couriers */
+    /* Fixes hidden text readability inside metrics cards and counters */
+    .text-muted.small.fw-bold.tracking-wider,
+    .text-muted.small.fw-bold.text-uppercase.tracking-wider {
+        color: #e2e8f0 !important; /* Forces the small label text over numbers to a crisp near-white color */
+        opacity: 0.9;
+    }
+
+    /* Fixed visibility for the subheader text under Customer Feedback */
+    p.text-muted.small {
+        color: #cbd5e1 !important; 
+    }
+
+    /* Forces /5 text labels next to big scores to show clearly */
+    .h2 .text-muted, .text-end .text-muted {
+        color: #94a3b8 !important;
+    }
+
+    /* Courier Status Label Badges */
     .courier-pill-badge {
         font-size: 0.75rem;
         font-weight: 700;
@@ -96,19 +110,39 @@
         border-radius: 6px;
         display: inline-block;
     }
-    .courier-ninja, .courier-ninjavan { background-color: #fff1f2; color: #e11d48; border: 1px solid #ffe4e6; }
-    .courier-jt, .courier-j-t-express { background-color: #fee2e2; color: #dc2626; }
-    .courier-poslaju, .courier-pos-laju { background-color: #ffedd5; color: #ea580c; }
-    .courier-fallback { background-color: #f1f5f9; color: #475569; }
+    .courier-ninja, .courier-ninjavan { background-color: rgba(225, 29, 72, 0.2); color: #fb7185; border: 1px solid rgba(225, 29, 72, 0.3); }
+    .courier-jt, .courier-j-t-express { background-color: rgba(220, 38, 38, 0.2); color: #f87171; border: 1px solid rgba(220, 38, 38, 0.3); }
+    .courier-poslaju, .courier-pos-laju { background-color: rgba(234, 88, 12, 0.2); color: #fb923c; border: 1px solid rgba(234, 88, 12, 0.3); }
+    .courier-fallback { background-color: rgba(255, 255, 255, 0.08); color: #cbd5e1; }
+
+    /* Complete dark structural fixes to defeat bright light layout visibility bugs */
+    .table {
+        color: #ffffff !important;
+        background: transparent !important;
+    }
+
+    .table td {
+        color: #f1f5f9 !important; 
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+        background: transparent !important;
+    }
 
     .sticky-table-head th {
         font-size: 0.75rem;
         text-transform: uppercase;
-        color: var(--text-muted);
+        color: #94a3b8 !important;
         font-weight: 700;
         letter-spacing: 0.05em;
-        background-color: rgba(248, 250, 252, 0.85) !important;
-        border-bottom: 2px solid rgba(226, 232, 240, 0.8);
+        background-color: rgba(15, 23, 42, 0.85) !important;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.15) !important;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+    }
+
+    .table-responsive {
+        background: transparent !important;
     }
 </style>
 
@@ -119,16 +153,14 @@
         {{-- Header Layout --}}
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
             <div>
-                <h2 class="fw-extrabold text-dark tracking-tight mb-1" style="font-size: 1.85rem;">Customer Feedback</h2>
+                <h2 class="fw-extrabold text-white tracking-tight mb-1" style="font-size: 1.85rem;">Customer Feedback</h2>
                 <p class="text-muted small mb-0 fw-medium">Service Quality & Sentiment Analysis</p>
             </div>
             <div class="d-flex gap-3">
-                {{-- Badge tracking comments count --}}
                 <div class="counter-badge-pill">
                     <div class="text-muted small fw-bold tracking-wider" style="font-size: 0.68rem; text-transform: uppercase;">Written Comments</div>
-                    <div class="h4 fw-extrabold mb-0 text-secondary mt-0.5">{{ $feedback->count() }}</div>
+                    <div class="h4 fw-extrabold mb-0 text-info mt-0.5">{{ $feedback->count() }}</div>
                 </div>
-                {{-- Badge tracking general survey respondents --}}
                 <div class="counter-badge-pill">
                     <div class="text-muted small fw-bold tracking-wider" style="font-size: 0.68rem; text-transform: uppercase;">Survey Respondents</div>
                     <div class="h4 fw-extrabold mb-0 text-danger mt-0.5">{{ $totalResponses }}</div>
@@ -141,7 +173,7 @@
             <div class="col-md-4">
                 <div class="card metric-top-strip blue-accent shadow-sm">
                     <div class="text-muted small fw-bold text-uppercase tracking-wider mb-2" style="font-size: 0.72rem;">Punctuality Score</div>
-                    <div class="h2 fw-extrabold text-dark mb-1">{{ number_format($avgPunctuality, 1) }}<span class="text-muted fw-normal" style="font-size: 1rem;">/5</span></div>
+                    <div class="h2 fw-extrabold text-white mb-1">{{ number_format($avgPunctuality, 1) }}<span class="text-muted fw-normal" style="font-size: 1rem;">/5</span></div>
                     <div class="text-warning small mt-1">
                         @for($i=1; $i<=5; $i++)
                             <i class="bi bi-star{{ $i <= round($avgPunctuality) ? '-fill' : '' }} mx-0.5"></i>
@@ -152,7 +184,7 @@
             <div class="col-md-4">
                 <div class="card metric-top-strip green-accent shadow-sm">
                     <div class="text-muted small fw-bold text-uppercase tracking-wider mb-2" style="font-size: 0.72rem;">Parcel Condition</div>
-                    <div class="h2 fw-extrabold text-dark mb-1">{{ number_format($avgCondition, 1) }}<span class="text-muted fw-normal" style="font-size: 1rem;">/5</span></div>
+                    <div class="h2 fw-extrabold text-white mb-1">{{ number_format($avgCondition, 1) }}<span class="text-muted fw-normal" style="font-size: 1rem;">/5</span></div>
                     <div class="text-warning small mt-1">
                         @for($i=1; $i<=5; $i++)
                             <i class="bi bi-star{{ $i <= round($avgCondition) ? '-fill' : '' }} mx-0.5"></i>
@@ -163,7 +195,7 @@
             <div class="col-md-4">
                 <div class="card metric-top-strip cyan-accent shadow-sm">
                     <div class="text-muted small fw-bold text-uppercase tracking-wider mb-2" style="font-size: 0.72rem;">Courier Attitude</div>
-                    <div class="h2 fw-extrabold text-dark mb-1">{{ number_format($avgAttitude, 1) }}<span class="text-muted fw-normal" style="font-size: 1rem;">/5</span></div>
+                    <div class="h2 fw-extrabold text-white mb-1">{{ number_format($avgAttitude, 1) }}<span class="text-muted fw-normal" style="font-size: 1rem;">/5</span></div>
                     <div class="text-warning small mt-1">
                         @for($i=1; $i<=5; $i++)
                             <i class="bi bi-star{{ $i <= round($avgAttitude) ? '-fill' : '' }} mx-0.5"></i>
@@ -177,7 +209,7 @@
         <div class="row g-4">
             <div class="col-lg-5">
                 <div class="card glass-feedback-card p-4 h-100">
-                    <h5 class="fw-bold text-dark mb-4" style="font-size: 1.05rem;">NinjaVan Trust Level</h5>
+                    <h5 class="fw-bold text-white mb-4" style="font-size: 1.05rem;">NinjaVan Trust Level</h5>
                     <div style="height: 300px; position: relative;">
                         <canvas id="trustChart"></canvas>
                     </div>
@@ -186,7 +218,7 @@
 
             <div class="col-lg-7">
                 <div class="card glass-feedback-card p-4 h-100">
-                    <h5 class="fw-bold text-dark mb-4" style="font-size: 1.05rem;">Recent Comments & Reasons</h5>
+                    <h5 class="fw-bold text-white mb-4" style="font-size: 1.05rem;">Recent Comments & Reasons</h5>
                     <div class="table-responsive" style="max-height: 300px; overflow-y: auto; border-radius: 8px;">
                         <table class="table table-hover align-middle mb-0">
                             <thead class="sticky-top ready sticky-table-head">
@@ -207,11 +239,11 @@
                                             {{ $f->preferred_courier }}
                                         </span>
                                     </td>
-                                    <td class="small text-secondary text-wrap" style="max-width: 320px; line-height: 1.4; font-weight: 500;">
+                                    <td class="small text-white text-wrap" style="max-width: 320px; line-height: 1.4; font-weight: 500;">
                                         {{ $f->reason }}
                                     </td>
                                     <td class="text-end">
-                                        <span class="fw-bold text-dark">{{ $f->trust_rating }}</span><span class="text-muted small">/5</span>
+                                        <span class="fw-bold text-white">{{ $f->trust_rating }}</span><span class="text-muted small">/5</span>
                                     </td>
                                 </tr>
                                 @endforeach
@@ -251,11 +283,11 @@
                 scales: { 
                     y: { 
                         beginAtZero: true, 
-                        ticks: { stepSize: 1, color: '#64748b', font: { family: 'Plus Jakarta Sans', size: 10, weight: 600 } },
-                        grid: { color: 'rgba(226, 232, 240, 0.6)' }
+                        ticks: { stepSize: 1, color: '#94a3b8', font: { family: 'Plus Jakarta Sans', size: 10, weight: 600 } },
+                        grid: { color: 'rgba(255, 255, 255, 0.06)' }
                     },
                     x: {
-                        ticks: { color: '#64748b', font: { family: 'Plus Jakarta Sans', size: 11, weight: 600 } },
+                        ticks: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans', size: 11, weight: 600 } },
                         grid: { display: false }
                     }
                 }
