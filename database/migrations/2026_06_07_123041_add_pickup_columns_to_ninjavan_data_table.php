@@ -11,9 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('feedback_data', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
+        Schema::table('ninjavan_data', function (Blueprint $table) {
+            //
         });
     }
 
@@ -22,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('feedback_data');
+        Schema::table('ninjavan_data', function (Blueprint $table) {
+            //
+        });
     }
 };
