@@ -11,12 +11,31 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Guna 'ninjavan_data' supaya sepadan dengan database di Railway
         Schema::table('ninjavan_data', function (Blueprint $table) {
             
-            // Kita semak dahulu, jika kolum 'Original_Weight' belum ada, baru kita tambah
+            // 1. Kolum Berat
             if (!Schema::hasColumn('ninjavan_data', 'Original_Weight')) {
                 $table->decimal('Original_Weight', 8, 2)->nullable();
+            }
+
+            // 2. Kolum Status (Punca ralat terbaharu)
+            if (!Schema::hasColumn('ninjavan_data', 'Order_Granular_Status')) {
+                $table->string('Order_Granular_Status')->nullable();
+            }
+            
+            // 3. Kolum Negeri / State (Sediaan untuk dashboard)
+            if (!Schema::hasColumn('ninjavan_data', 'L1_Name')) {
+                $table->string('L1_Name')->nullable();
+            }
+            
+            // 4. Kolum Saiz Parcel (Sediaan untuk dashboard)
+            if (!Schema::hasColumn('ninjavan_data', 'Parcel_Size_ID')) {
+                $table->string('Parcel_Size_ID')->nullable();
+            }
+            
+            // 5. Kolum Jantina (Sediaan untuk dashboard)
+            if (!Schema::hasColumn('ninjavan_data', 'Gender')) {
+                $table->string('Gender')->nullable();
             }
             
         });
@@ -28,8 +47,12 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('ninjavan_data', function (Blueprint $table) {
-            if (Schema::hasColumn('ninjavan_data', 'Original_Weight')) {
-                $table->dropColumn('Original_Weight');
+            $columns = ['Original_Weight', 'Order_Granular_Status', 'L1_Name', 'Parcel_Size_ID', 'Gender'];
+            
+            foreach ($columns as $column) {
+                if (Schema::hasColumn('ninjavan_data', $column)) {
+                    $table->dropColumn($column);
+                }
             }
         });
     }
