@@ -1,1 +1,1 @@
-web: php artisan migrate:fresh --force --seed && php -S 0.0.0.0:$PORT -t public/
+web: php artisan migrate:fresh --force --seed && heroku-php-apache2 public/
