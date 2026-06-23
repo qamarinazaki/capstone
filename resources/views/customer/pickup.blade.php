@@ -1,6 +1,22 @@
 @extends('layouts.app')
 
 @section('content')
+{{-- Custom background for this page only --}}
+<style>
+    body {
+        background-image: url('{{ asset('images/ninjavan-bg.png') }}') !important;
+        background-size: cover;
+        background-position: center center;
+        background-attachment: fixed;
+        background-repeat: no-repeat;
+    }
+    /* Optional: make the card stand out over the background */
+    .card {
+        backdrop-filter: blur(4px);
+        background: rgba(255, 255, 255, 0.92) !important;
+    }
+</style>
+
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-md-6">

@@ -171,6 +171,29 @@
             color: #ffffff !important;
             border-color: #dc3545 !important;
         }
+        <style>
+    /* Replace the class names with whatever yours are (e.g., .pickup-card, .assign-card, .locker-card) */
+    .pickup-card {
+        background-image: url('/images/ninja-bg.png') !important;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+
+    .assign-card {
+        background-image: url('/images/ninja-bg.png') !important;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+
+    .locker-card {
+        background-image: url('/images/ninja-bg.png') !important;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+</style>
     </style>
 </head>
 <body>

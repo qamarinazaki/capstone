@@ -1,6 +1,14 @@
 @extends('layouts.app')
 
 @section('content')
+<style>
+    body {
+        background-image: url('{{ asset('images/ninjavan-bg.png') }}') !important;
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+    }
+</style>
 <div class="container py-4">
     <div class="row justify-content-center">
         <div class="col-md-6">
